@@ -85,10 +85,12 @@ def mobile_block(x, f1, f2, p):
 
 ###############################################################
 
-x = tf.placeholder(tf.float32, [1, 1920, 1080, 3])
-y = tf.placeholder(tf.float32, [None, 16, 9, 5])
+image_ph  = tf.placeholder(tf.float32, [1, 1920, 1080, 3])
+coords_ph = tf.placeholder(tf.float32, [None, 16, 9, 5])
+obj_ph    = tf.placeholder(tf.float32, [None, 16, 9])
+no_obj_ph = tf.placeholder(tf.float32, [None, 16, 9])
 
-bn     = batch_norm(x, 3)                        # 1920
+bn     = batch_norm(image_ph, 3)                 # 1920
 
 block1 = block(bn, 3, 32, 5)                     # 1920
 
@@ -111,7 +113,7 @@ block10 = mobile_block(block9, 512, 10, 1)       # 16
 
 ###############################################################
 
-loss = yolo_loss(block10, y)
+loss = yolo_loss(block10, coords_ph, obj_ph, no_obj_ph)
 
 params = tf.trainable_variables()
 
@@ -137,10 +139,7 @@ while True:
         image = np.transpose(image, [1, 0, 2])
         image = np.reshape(image, [1, 1920, 1080, 3])
 
-        label = np.random.uniform(size=[1, 16, 9, 5])
-
-        [out, l] = sess.run([block10, loss], feed_dict={x: image, y: label})
-        print (np.shape(coords))
+        [out, l] = sess.run([block10, loss], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
 
 ###############################################################
 

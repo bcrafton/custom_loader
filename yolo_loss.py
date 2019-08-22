@@ -24,36 +24,15 @@ def iou_train_unit(boxA, realBox):
     iou = tf.divide(intersection, union)
     return iou
 
-'''
+
 def yolo_loss(pred, label, obj, no_obj):
 
-    # shape(pred)   = [1, 16, 9, 5, 2]
+    # shape(pred)   = [1, 16, 9, 10]
     # shape(label)  = [1, 16, 9, 5]
     # shape(obj)    = [1, 16, 9]
     # shape(no_obj) = [1, 16, 9]
 
-    pred   = tf.reshape(pred,   [1, 16, 9, 5, 2])
-    label  = tf.reshape(label,  [1, 16, 9, 5])
-    obj    = tf.reshape(obj,    [1, 16, 9, 1, 1])
-    no_obj = tf.reshape(no_obj, [1, 16, 9, 1, 1])
-
-    ######################################
-
-    pred_box1 = pred[:, :, :, 0:4, 0]
-    pred_box2 = pred[:, :, :, 0:4, 1]
-    label_box = label[:, :, :, 0:4]
-
-    iou = iou_train(pred_box1, pred_box2, label_box)
-    return iou
-'''
-
-def yolo_loss(pred, label):
-
-    # shape(pred)   = [1, 16, 9, 5, 2]
-    # shape(label)  = [1, 16, 9, 5]
-
-    pred   = tf.reshape(pred,   [1, 16, 9, 5, 2])
-    label  = tf.reshape(label,  [1, 16, 9, 5])
+    pred   = tf.reshape(pred,   [-1, 16, 9, 5, 2])
 
     ######################################
 
@@ -64,6 +43,7 @@ def yolo_loss(pred, label):
     iou = iou_train(pred_box1, pred_box2, label_box)
     bb = tf.greater(iou[:, :, :, 0], iou[:, :, :, 1])
     return bb
+
 
 
 
