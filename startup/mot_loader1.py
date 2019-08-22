@@ -110,9 +110,9 @@ test_labels = get_labels(test_folders)
 
 #########################################
 
-filename = '/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-02-DPM/img1/000100.jpg'
+filename = '/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-03-DPM/img1/000100.jpg'
 image  = cv2.imread(filename)
-labels = train_labels[filename]
+labels = test_labels[filename]
 
 for label in labels:
     # <frame>, <id>, <bb_left>, <bb_top>, <bb_width>, <bb_height>, <conf>, <x>, <y>, <z>
