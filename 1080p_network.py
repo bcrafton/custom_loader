@@ -105,8 +105,10 @@ block7 = mobile_block(block6, 256, 512, 2)       # 64
 block8 = mobile_block(block7, 512, 512, 1)       # 32
 block9 = mobile_block(block8, 512, 512, 2)       # 32
 
-block10 = mobile_block(block9, 512, 512, 1)      # 16
-block11 = mobile_block(block10, 512, 512, 1)     # 16
+# S × S × (B ∗ 5 + C) 
+# C = 0.
+# B = 2.
+block10 = mobile_block(block9, 512, 10, 1)       # 16
 
 ###############################################################
 
@@ -133,7 +135,7 @@ while True:
         image = loader.pop()
         image = np.transpose(image, [1, 0, 2])
         image = np.reshape(image, [1, 1920, 1080, 3])
-        [out] = sess.run([block11], feed_dict={x: image})
+        [out] = sess.run([block10], feed_dict={x: image})
         print (np.shape(out))   
     
     
