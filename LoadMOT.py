@@ -109,7 +109,7 @@ def fill_queue(d, q):
     last = len(d) - 1
 
     while(True):
-        if q.full() == False:
+        if not q.full():
             filename = d[ii]
             x = cv2.imread(filename)
             q.put(x)
@@ -132,6 +132,12 @@ class LoadMOT:
 
     def pop(self):
         return self.q.get()
+
+    def empty(self):
+        return self.q.empty()
+
+    def full(self):
+        return self.q.full()
 
 ###################################################################
 

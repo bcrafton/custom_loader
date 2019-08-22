@@ -32,6 +32,12 @@ from bc_utils.conv_utils import conv_input_length
 from bc_utils.init_tensor import init_filters
 from bc_utils.init_tensor import init_matrix
 
+from LoadMOT import LoadMOT
+
+##############################################
+
+loader = LoadMOT()
+
 ##############################################
 
 def in_top_k(x, y, k):
@@ -102,7 +108,6 @@ block9 = mobile_block(block8, 512, 512, 2)       # 32
 block10 = mobile_block(block9, 512, 512, 1)      # 16
 block11 = mobile_block(block10, 512, 512, 1)     # 16
 
-
 ###############################################################
 
 params = tf.trainable_variables()
@@ -123,12 +128,13 @@ assert (False)
 
 ###############################################################
 
-image = cv2.imread('/usr/scratch/bcrafton/MOT17Det/train/MOT17-02/img1/000001.jpg')
-image = np.transpose(image, [1, 0, 2])
-image = np.reshape(image, [1, 1920, 1080, 3])
-[out] = sess.run([block11], feed_dict={x: image})
-
-print (np.shape(out))   
+while True:
+    if not loader.empty():
+        image = loader.pop()
+        image = np.transpose(image, [1, 0, 2])
+        image = np.reshape(image, [1, 1920, 1080, 3])
+        [out] = sess.run([block11], feed_dict={x: image})
+        print (np.shape(out))   
     
     
     
