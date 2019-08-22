@@ -102,18 +102,37 @@ def get_labels(folders):
 
 #########################################
 
-def load_mot()
-    train_images = get_images('/home/brian/Documents/projects/object_detection/MOT17Det/train')
-    train_labels = get_labels(train_folders)
+def fill_queue(d, q):
+    ii = 0
+    last = len(d) - 1
 
-    test_images = get_images('/home/brian/Documents/projects/object_detection/MOT17Det/test')
-    test_labels = get_labels(test_folders)
-
-    return train_images, train_labels, test_images, test_labels
+    while(True):
+        if q.full() == False:
+            filename = d[ii]
+            x = cv2.imread(filename)
+            q.put(x)
+            ii = (ii + 1) if (ii < last) else 0
+            print (ii)
 
 #########################################
 
+class LoadMOT:
 
+    def __init__(self):
+        self.train_images = get_images('/home/brian/Documents/projects/object_detection/MOT17Det/train')
+        self.train_labels = get_labels(train_folders)
+
+        self.test_images = get_images('/home/brian/Documents/projects/object_detection/MOT17Det/test')
+        self.test_labels = get_labels(test_folders)
+
+        self.q = queue.Queue(maxsize=128)
+        thread = threading.Thread(target=fill_queue, args=(self.train_images, self.q))
+        thread.start()
+
+    def pop(self):
+        return self.q.get()
+
+###################################################################
 
 
 
