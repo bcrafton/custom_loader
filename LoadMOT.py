@@ -76,8 +76,6 @@ test_folders = [
 def get_images(path):
 
     images = []
-    labels = {}
-
     for subdir, dirs, files in os.walk(path):
         for folder in dirs:
             for folder_subdir, folder_dirs, folder_files in os.walk(os.path.join(subdir, folder)):
@@ -89,7 +87,7 @@ def get_images(path):
 
 #########################################
 
-def get_labels(folders):
+def get_labels_table(folders):
     lookup = {}
     for folder in folders:
         mat = np.loadtxt(open(folder + 'det/det.txt', "rb"), delimiter=",", skiprows=0)
@@ -104,15 +102,44 @@ def get_labels(folders):
 
 #########################################
 
-def fill_queue(d, q):
+def get_boxes(labels):
+    nlabels = len(labels)
+    obj     = np.zeros(shape=[nlabels, 16, 9])
+    no_obj  = np.zeros(shape=[nlabels, 16, 9])
+    coords  = np.zeros(shape=[nlabels, 16, 9, 5])
+
+    for ii in range(nlabels):
+        # <frame>, <id>, <bb_left>, <bb_top>, <bb_width>, <bb_height>, <conf>, <x>, <y>, <z>
+        
+        label = labels[ii]
+
+        l = max(label[2], 0.)
+        t = max(label[3], 0.)
+        w = max(label[4], 0.)
+        h = max(label[5], 0.)
+        c = max(label[6], 0.)
+
+        x = int(l) // 120
+        y = int(t) // 120
+
+        coords[ii, x, y, :] = np.array([l, t, h, w, c])
+        obj[ii, x, y] = 1
+        no_obj[ii] = np.ones(shape=[16, 9]) - obj[ii]
+
+    return (coords, obj, no_obj)
+
+#########################################
+
+def fill_queue(images, labels_table, q):
     ii = 0
-    last = len(d) - 1
+    last = len(images) - 1
 
     while(True):
         if not q.full():
-            filename = d[ii]
+            filename = images[ii]
             x = cv2.imread(filename)
-            q.put(x)
+            y = get_boxes(labels_table[filename])
+            q.put((x, y))
             ii = (ii + 1) if (ii < last) else 0
 
 #########################################
@@ -120,14 +147,14 @@ def fill_queue(d, q):
 class LoadMOT:
 
     def __init__(self):
-        self.train_images = get_images('/home/brian/Documents/projects/object_detection/MOT17Det/train')
-        self.train_labels = get_labels(train_folders)
+        self.train_images = get_images('/home/brian/Documents/projects/object_detection/MOT17/train')
+        self.train_labels_table = get_labels_table(train_folders)
 
-        self.test_images = get_images('/home/brian/Documents/projects/object_detection/MOT17Det/test')
-        self.test_labels = get_labels(test_folders)
+        self.test_images = get_images('/home/brian/Documents/projects/object_detection/MOT17/test')
+        self.test_labels_table = get_labels_table(test_folders)
 
         self.q = queue.Queue(maxsize=128)
-        thread = threading.Thread(target=fill_queue, args=(self.train_images, self.q))
+        thread = threading.Thread(target=fill_queue, args=(self.train_images, self.train_labels_table, self.q))
         thread.start()
 
     def pop(self):

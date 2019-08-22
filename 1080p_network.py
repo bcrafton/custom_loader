@@ -33,6 +33,7 @@ from bc_utils.init_tensor import init_filters
 from bc_utils.init_tensor import init_matrix
 
 from LoadMOT import LoadMOT
+from yolo_loss import yolo_loss
 
 ##############################################
 
@@ -85,9 +86,7 @@ def mobile_block(x, f1, f2, p):
 ###############################################################
 
 x = tf.placeholder(tf.float32, [1, 1920, 1080, 3])
-# y = tf.placeholder(tf.float32, [1, 10])
-# batch_size = tf.placeholder(tf.int32, shape=())
-# lr = tf.placeholder(tf.float32, shape=())
+y = tf.placeholder(tf.float32, [None, 16, 9, 5])
 
 bn     = batch_norm(x, 3)                        # 1920
 
@@ -112,6 +111,8 @@ block10 = mobile_block(block9, 512, 10, 1)       # 16
 
 ###############################################################
 
+loss = yolo_loss(block10, y)
+
 params = tf.trainable_variables()
 
 ###############################################################
@@ -132,11 +133,19 @@ assert (False)
 
 while True:
     if not loader.empty():
-        image = loader.pop()
+        image, (coords, obj, no_obj) = loader.pop()
         image = np.transpose(image, [1, 0, 2])
         image = np.reshape(image, [1, 1920, 1080, 3])
-        [out] = sess.run([block10], feed_dict={x: image})
-        print (np.shape(out))   
+
+        label = np.random.uniform(size=[1, 16, 9, 5])
+
+        [out, l] = sess.run([block10, loss], feed_dict={x: image, y: label})
+        print (np.shape(coords))
+
+###############################################################
+
+
+
     
     
     
