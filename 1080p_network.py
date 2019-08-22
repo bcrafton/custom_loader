@@ -114,7 +114,7 @@ block10 = mobile_block(block9, 512, 10, 1)       # 16
 ###############################################################
 
 loss = yolo_loss(block10, coords_ph, obj_ph, no_obj_ph)
-
+train = tf.train.AdamOptimizer(learning_rate=0.001, epsilon=1.).minimize(loss)
 params = tf.trainable_variables()
 
 ###############################################################
@@ -139,9 +139,9 @@ while True:
         image = np.transpose(image, [1, 0, 2])
         image = np.reshape(image, [1, 1920, 1080, 3])
 
-        [out, l] = sess.run([block10, loss], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
+        [l, _] = sess.run([loss, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
         # print (np.shape(l))
-        # print (l)
+        print (l)
 
 ###############################################################
 

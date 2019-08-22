@@ -67,7 +67,8 @@ def yolo_loss(pred, label, obj, no_obj):
 
     ######################################
 
-    loss = box_loss + conf_loss + no_obj_loss
+    total_loss = box_loss + conf_loss + no_obj_loss # [?, 16, 9]
+    loss = tf.reduce_mean(tf.reduce_sum(total_loss, axis=[1, 2]))
 
     return loss
 
