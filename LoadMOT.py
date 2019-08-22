@@ -5,7 +5,9 @@ import csv
 import numpy as np
 
 import cv2
-import matplotlib.pyplot as plt
+
+import queue
+import threading
 
 #########################################
 
@@ -112,7 +114,6 @@ def fill_queue(d, q):
             x = cv2.imread(filename)
             q.put(x)
             ii = (ii + 1) if (ii < last) else 0
-            print (ii)
 
 #########################################
 
