@@ -23,7 +23,7 @@ if args.gpu >= 0:
 import keras
 import tensorflow as tf
 import numpy as np
-np.set_printoptions(threshold=1000)
+np.set_printoptions(threshold=10000)
 import cv2
 
 from bc_utils.conv_utils import conv_output_length
@@ -140,6 +140,8 @@ while True:
         image = np.reshape(image, [1, 1920, 1080, 3])
 
         [out, l] = sess.run([block10, loss], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
+        # print (np.shape(l))
+        # print (l)
 
 ###############################################################
 

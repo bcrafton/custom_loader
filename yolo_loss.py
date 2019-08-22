@@ -36,13 +36,40 @@ def yolo_loss(pred, label, obj, no_obj):
 
     ######################################
 
+    label_box = label[:, :, :, 0:4]
     pred_box1 = pred[:, :, :, 0:4, 0]
     pred_box2 = pred[:, :, :, 0:4, 1]
-    label_box = label[:, :, :, 0:4]
+
+    label_conf = label[:, :, :, 4]
+    pred_conf1 = pred[:, :, :, 4, 0]
+    pred_conf2 = pred[:, :, :, 4, 1]
 
     iou = iou_train(pred_box1, pred_box2, label_box)
-    bb = tf.greater(iou[:, :, :, 0], iou[:, :, :, 1])
-    return bb
+    resp_box = tf.greater(iou[:, :, :, 0], iou[:, :, :, 1])
+
+    ######################################
+
+    loss_box1 = tf.reduce_sum(tf.square(pred_box1 - label_box), 3)
+    loss_box2 = tf.reduce_sum(tf.square(pred_box2 - label_box), 3)
+    box_loss = obj * tf.where(resp_box, loss_box1, loss_box2)
+
+    ######################################
+
+    loss_conf1 = tf.square(pred_conf1 - label_conf)
+    loss_conf2 = tf.square(pred_conf2 - label_conf)
+    conf_loss = obj * tf.where(resp_box, loss_conf1, loss_conf2)
+
+    ######################################    
+
+    loss_no_obj1 = tf.square(pred_conf1 - label_conf)
+    loss_no_obj2 = tf.square(pred_conf2 - label_conf)
+    no_obj_loss = no_obj * tf.where(resp_box, loss_no_obj1, loss_no_obj2)
+
+    ######################################
+
+    loss = box_loss + conf_loss + no_obj_loss
+
+    return loss
 
 
 
