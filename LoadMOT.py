@@ -11,64 +11,69 @@ import threading
 
 #########################################
 
+if exxact:
+    path = '/home/bcrafton3/MOT17/'
+if local:
+    path = '/home/brian/Documents/projects/object_detection/MOT17/'
+
 train_folders = [
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-02-DPM/',
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-02-FRCNN/',
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-02-SDP/',
+path + 'train/MOT17-02-DPM/',
+path + 'train/MOT17-02-FRCNN/',
+path + 'train/MOT17-02-SDP/',
 
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-04-DPM/',
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-04-FRCNN/',
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-04-SDP/',
+path + 'train/MOT17-04-DPM/',
+path + 'train/MOT17-04-FRCNN/',
+path + 'train/MOT17-04-SDP/',
 
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-05-DPM/',
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-05-FRCNN/',
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-05-SDP/',
+path + 'train/MOT17-05-DPM/',
+path + 'train/MOT17-05-FRCNN/',
+path + 'train/MOT17-05-SDP/',
 
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-09-DPM/',
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-09-FRCNN/',
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-09-SDP/',
+path + 'train/MOT17-09-DPM/',
+path + 'train/MOT17-09-FRCNN/',
+path + 'train/MOT17-09-SDP/',
 
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-10-DPM/',
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-10-FRCNN/',
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-10-SDP/',
+path + 'train/MOT17-10-DPM/',
+path + 'train/MOT17-10-FRCNN/',
+path + 'train/MOT17-10-SDP/',
 
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-11-DPM/',
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-11-FRCNN/',
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-11-SDP/',
+path + 'train/MOT17-11-DPM/',
+path + 'train/MOT17-11-FRCNN/',
+path + 'train/MOT17-11-SDP/',
 
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-11-DPM/',
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-11-FRCNN/',
-'/home/brian/Documents/projects/object_detection/MOT17/train/MOT17-11-SDP/',
+path + 'train/MOT17-11-DPM/',
+path + 'train/MOT17-11-FRCNN/',
+path + 'train/MOT17-11-SDP/',
 ]
 
 test_folders = [
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-01-DPM/',
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-01-FRCNN/',
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-01-SDP/',
+path + 'test/MOT17-01-DPM/',
+path + 'test/MOT17-01-FRCNN/',
+path + 'test/MOT17-01-SDP/',
 
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-03-DPM/',
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-03-FRCNN/',
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-03-SDP/',
+path + 'test/MOT17-03-DPM/',
+path + 'test/MOT17-03-FRCNN/',
+path + 'test/MOT17-03-SDP/',
 
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-06-DPM/',
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-06-FRCNN/',
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-06-SDP/',
+path + 'test/MOT17-06-DPM/',
+path + 'test/MOT17-06-FRCNN/',
+path + 'test/MOT17-06-SDP/',
 
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-07-DPM/',
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-07-FRCNN/',
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-07-SDP/',
+path + 'test/MOT17-07-DPM/',
+path + 'test/MOT17-07-FRCNN/',
+path + 'test/MOT17-07-SDP/',
 
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-08-DPM/',
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-08-FRCNN/',
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-08-SDP/',
+path + 'test/MOT17-08-DPM/',
+path + 'test/MOT17-08-FRCNN/',
+path + 'test/MOT17-08-SDP/',
 
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-12-DPM/',
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-12-FRCNN/',
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-12-SDP/',
+path + 'test/MOT17-12-DPM/',
+path + 'test/MOT17-12-FRCNN/',
+path + 'test/MOT17-12-SDP/',
 
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-14-DPM/',
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-14-FRCNN/',
-'/home/brian/Documents/projects/object_detection/MOT17/test/MOT17-14-SDP/',
+path + 'test/MOT17-14-DPM/',
+path + 'test/MOT17-14-FRCNN/',
+path + 'test/MOT17-14-SDP/',
 ]
 
 #########################################
@@ -147,10 +152,10 @@ def fill_queue(images, labels_table, q):
 class LoadMOT:
 
     def __init__(self):
-        self.train_images = get_images('/home/brian/Documents/projects/object_detection/MOT17/train')
+        self.train_images = get_images(path + 'train')
         self.train_labels_table = get_labels_table(train_folders)
 
-        self.test_images = get_images('/home/brian/Documents/projects/object_detection/MOT17/test')
+        self.test_images = get_images(path + 'test')
         self.test_labels_table = get_labels_table(test_folders)
 
         self.q = queue.Queue(maxsize=128)
