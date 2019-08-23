@@ -11,10 +11,15 @@ import threading
 
 #########################################
 
+exxact = 1
+local = 0
+
 if exxact:
     path = '/home/bcrafton3/MOT17/'
-if local:
+elif local:
     path = '/home/brian/Documents/projects/object_detection/MOT17/'
+else:
+    assert(False)
 
 train_folders = [
 path + 'train/MOT17-02-DPM/',
