@@ -39,7 +39,7 @@ from yolo_loss import yolo_loss
 ##############################################
 
 loader = LoadMOT()
-weight_dict = np.load(args.load, allow_pickle=True).item()
+wd = np.load(args.load, allow_pickle=True).item()
 
 ##############################################
 
@@ -59,28 +59,37 @@ def in_top_k(x, y, k):
 def avg_pool(x, s):
     return tf.nn.avg_pool(bn, ksize=[1,s,s,1], strides=[1,s,s,1], padding='SAME')
 
-def batch_norm(x, f, name):
-    gamma = tf.Variable(weight_dict[name+'_gamma'+':0'], dtype=tf.float32, name=name+'_gamma')
-    beta = tf.Variable(weight_dict[name+'_beta'+':0'], dtype=tf.float32, name=name+'_beta')
-    # gamma = tf.Variable(np.ones(shape=f), dtype=tf.float32)
-    # beta = tf.Variable(np.zeros(shape=f), dtype=tf.float32)
+def batch_norm(x, f, name, load):
+    if load:
+        gamma = tf.Variable(load[name+'_gamma'+':0'], dtype=tf.float32, name=name+'_gamma')
+        beta = tf.Variable(load[name+'_beta'+':0'], dtype=tf.float32, name=name+'_beta')
+    else:
+        gamma = tf.Variable(np.ones(shape=f), dtype=tf.float32)
+        beta = tf.Variable(np.zeros(shape=f), dtype=tf.float32)
 
     mean = tf.reduce_mean(x, axis=[0,1,2])
     _, var = tf.nn.moments(x - mean, axes=[0,1,2])
     bn = tf.nn.batch_normalization(x=x, mean=mean, variance=var, offset=beta, scale=gamma, variance_epsilon=1e-3)
     return bn
 
-def block(x, f1, f2, p, name):
-    filters = tf.Variable(weight_dict[name+'_conv'+':0'], dtype=tf.float32, name=name+'_conv')
+def block(x, f1, f2, p, load):
+    if load:
+        filters = tf.Variable(load[name+'_conv'+':0'], dtype=tf.float32, name=name+'_conv')
+    else:
+        filters = tf.Variable(init_filters(size=[3,3,f1,f2], init='alexnet'), dtype=tf.float32, name=name+'_conv')
 
     conv = tf.nn.conv2d(x, filters, [1,p,p,1], 'SAME')
     bn   = batch_norm(conv, f2, name+'_bn')
     relu = tf.nn.relu(bn)
     return relu
 
-def mobile_block(x, f1, f2, p, name):
-    filters1 = tf.Variable(weight_dict[name+'_conv_dw'+':0'], dtype=tf.float32, name=name+'_conv_dw')
-    filters2 = tf.Variable(weight_dict[name+'_conv_pw'+':0'], dtype=tf.float32, name=name+'_conv_pw')
+def mobile_block(x, f1, f2, p, name, load):
+    if load:
+        filters1 = tf.Variable(load[name+'_conv_dw'+':0'], dtype=tf.float32, name=name+'_conv_dw')
+        filters2 = tf.Variable(load[name+'_conv_pw'+':0'], dtype=tf.float32, name=name+'_conv_pw')
+    else:
+        filters1 = tf.Variable(init_filters(size=[4,4,f1,1], init='alexnet'), dtype=tf.float32)
+        filters2 = tf.Variable(init_filters(size=[1,1,f1,f2], init='alexnet'), dtype=tf.float32)
 
     conv1 = tf.nn.depthwise_conv2d(x, filters1, [1,p,p,1], 'SAME')
     bn1   = batch_norm(conv1, f1, name+'_bn_dw')
@@ -99,29 +108,33 @@ coords_ph = tf.placeholder(tf.float32, [None, 16, 9, 5])
 obj_ph    = tf.placeholder(tf.float32, [None, 16, 9])
 no_obj_ph = tf.placeholder(tf.float32, [None, 16, 9])
 
-bn     = batch_norm(image_ph, 3, 'bn0')                   # 224 1920
+bn     = batch_norm(image_ph, 3, 'bn0', None)                 # 224 1920
 
-pool1  = avg_pool(bn, 5)                                  #     1920
-block1 = block(pool1, 3, 32, 3, 'block1')                 # 224 384
+pool1  = avg_pool(bn, 5)                                      #     1920
+block1 = block(pool1, 3, 32, 3, 'block1', wd)                 # 224 384
 
-block2 = mobile_block(block1, 32, 64, 1, 'block2')        # 112 128
-block3 = mobile_block(block2, 64, 128, 2, 'block3')       # 112 128
+block2 = mobile_block(block1, 32, 64, 1, 'block2', wd)        # 112 128
+block3 = mobile_block(block2, 64, 128, 2, 'block3', wd)       # 112 128
 
-block4 = mobile_block(block3, 128, 128, 1, 'block4')      # 56  64
-block5 = mobile_block(block4, 128, 256, 2, 'block5')      # 56  64
+block4 = mobile_block(block3, 128, 128, 1, 'block4', wd)      # 56  64
+block5 = mobile_block(block4, 128, 256, 2, 'block5', wd)      # 56  64
 
-block6 = mobile_block(block5, 256, 256, 1, 'block6')      # 28  32
-block7 = mobile_block(block6, 256, 512, 2, 'block7')      # 28  32
+block6 = mobile_block(block5, 256, 256, 1, 'block6', wd)      # 28  32
+block7 = mobile_block(block6, 256, 512, 2, 'block7', wd)      # 28  32
 
-block8 = mobile_block(block7, 512, 512, 1, 'block8')      # 14  16
-block9 = mobile_block(block8, 512, 512, 1, 'block9')      # 14  16
-block10 = mobile_block(block9, 512, 512, 1, 'block10')    # 14  16
-block11 = mobile_block(block10, 512, 512, 1, 'block11')   # 14  16
-block12 = mobile_block(block11, 512, 512, 1, 'block12')   # 14  16
+block8 = mobile_block(block7, 512, 512, 1, 'block8', wd)      # 14  16
+block9 = mobile_block(block8, 512, 512, 1, 'block9', wd)      # 14  16
+block10 = mobile_block(block9, 512, 512, 1, 'block10', wd)    # 14  16
+block11 = mobile_block(block10, 512, 512, 1, 'block11', wd)   # 14  16
+block12 = mobile_block(block11, 512, 512, 1, 'block12', wd)   # 14  16
 
-flat   = tf.reshape(block12, [1, 512*16*9])
+block13 = mobile_block(block12, 512, 256, 1, 'block13', None) #     16
+block14 = mobile_block(block13, 256, 128, 1, 'block14', None) #     16
+block15 = mobile_block(block14, 128, 64,  1, 'block15', None) #     16
 
-mat1   = tf.Variable(init_matrix(size=(512*16*9, 4096), init='alexnet'), dtype=tf.float32, name='fc1')
+flat   = tf.reshape(block12, [1, 64*16*9])
+
+mat1   = tf.Variable(init_matrix(size=(64*16*9, 4096), init='alexnet'), dtype=tf.float32, name='fc1')
 bias1  = tf.Variable(np.zeros(shape=4096), dtype=tf.float32, name='fc1_bias')
 fc1    = tf.matmul(flat, mat1) + bias1
 relu1  = tf.nn.relu(fc1)
