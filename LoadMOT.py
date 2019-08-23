@@ -149,7 +149,7 @@ def fill_queue(images, labels_table, q):
     while(True):
         if not q.full():
             filename = images[ii]
-            print (filename, q.qsize(), ii)
+            # print (filename, q.qsize(), ii)
             x = cv2.imread(filename)
             y = get_boxes(labels_table[filename])
             ii = (ii + 1) if (ii < last) else 0

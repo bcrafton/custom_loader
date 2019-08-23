@@ -72,31 +72,32 @@ def batch_norm(x, f, name, load):
     bn = tf.nn.batch_normalization(x=x, mean=mean, variance=var, offset=beta, scale=gamma, variance_epsilon=1e-3)
     return bn
 
-def block(x, f1, f2, p, load):
+def block(x, f1, f2, p, name, load):
     if load:
         filters = tf.Variable(load[name+'_conv'+':0'], dtype=tf.float32, name=name+'_conv')
     else:
         filters = tf.Variable(init_filters(size=[3,3,f1,f2], init='alexnet'), dtype=tf.float32, name=name+'_conv')
 
     conv = tf.nn.conv2d(x, filters, [1,p,p,1], 'SAME')
-    bn   = batch_norm(conv, f2, name+'_bn')
+    bn   = batch_norm(conv, f2, name+'_bn', load)
     relu = tf.nn.relu(bn)
     return relu
 
 def mobile_block(x, f1, f2, p, name, load):
+    print (name)
     if load:
         filters1 = tf.Variable(load[name+'_conv_dw'+':0'], dtype=tf.float32, name=name+'_conv_dw')
         filters2 = tf.Variable(load[name+'_conv_pw'+':0'], dtype=tf.float32, name=name+'_conv_pw')
     else:
-        filters1 = tf.Variable(init_filters(size=[4,4,f1,1], init='alexnet'), dtype=tf.float32)
+        filters1 = tf.Variable(init_filters(size=[3,3,f1,1], init='alexnet'), dtype=tf.float32)
         filters2 = tf.Variable(init_filters(size=[1,1,f1,f2], init='alexnet'), dtype=tf.float32)
 
     conv1 = tf.nn.depthwise_conv2d(x, filters1, [1,p,p,1], 'SAME')
-    bn1   = batch_norm(conv1, f1, name+'_bn_dw')
+    bn1   = batch_norm(conv1, f1, name+'_bn_dw', load)
     relu1 = tf.nn.relu(bn1)
 
     conv2 = tf.nn.conv2d(relu1, filters2, [1,1,1,1], 'SAME')
-    bn2   = batch_norm(conv2, f2, name+'_bn_pw')
+    bn2   = batch_norm(conv2, f2, name+'_bn_pw', load)
     relu2 = tf.nn.relu(bn2)
 
     return relu2
@@ -132,7 +133,7 @@ block13 = mobile_block(block12, 512, 256, 1, 'block13', None) #     16
 block14 = mobile_block(block13, 256, 128, 1, 'block14', None) #     16
 block15 = mobile_block(block14, 128, 64,  1, 'block15', None) #     16
 
-flat   = tf.reshape(block12, [1, 64*16*9])
+flat   = tf.reshape(block15, [1, 64*16*9])
 
 mat1   = tf.Variable(init_matrix(size=(64*16*9, 4096), init='alexnet'), dtype=tf.float32, name='fc1')
 bias1  = tf.Variable(np.zeros(shape=4096), dtype=tf.float32, name='fc1_bias')
