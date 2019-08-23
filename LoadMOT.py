@@ -49,6 +49,10 @@ path + 'train/MOT17-11-SDP/',
 path + 'train/MOT17-11-DPM/',
 path + 'train/MOT17-11-FRCNN/',
 path + 'train/MOT17-11-SDP/',
+
+path + 'train/MOT17-13-DPM/',
+path + 'train/MOT17-13-FRCNN/',
+path + 'train/MOT17-13-SDP/',
 ]
 
 test_folders = [
@@ -149,10 +153,26 @@ def fill_queue(images, labels_table, q):
     while(True):
         if not q.full():
             filename = images[ii]
-            # print (filename, q.qsize(), ii)
-            x = cv2.imread(filename)
-            y = get_boxes(labels_table[filename])
             ii = (ii + 1) if (ii < last) else 0
+
+            x = cv2.imread(filename)
+            shape = np.shape(x)
+            if   shape == (1920, 1080, 3):
+                pass
+            elif shape == (1080, 1920, 3):
+                x = np.transpose(x, [1, 0, 2])
+            else:
+                print ('skipping: %s' % (filename))
+                continue
+
+            x = np.reshape(x, (1, 1920, 1080, 3))
+
+            if filename in labels_table.keys():
+                y = get_boxes(labels_table[filename])
+            else:
+                print ('no label: %s' % (filename))
+                continue
+
             q.put((x, y))
 
 #########################################
