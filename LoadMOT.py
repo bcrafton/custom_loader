@@ -91,7 +91,9 @@ def get_images(path):
             for folder_subdir, folder_dirs, folder_files in os.walk(os.path.join(subdir, folder)):
                 for file in folder_files:
                     if 'jpg' in file:
-                        images.append(os.path.join(folder_subdir, file))
+                        full_path = os.path.join(folder_subdir, file)
+                        if (full_path not in images):
+                            images.append(full_path)
 
     return images
 
@@ -147,20 +149,21 @@ def fill_queue(images, labels_table, q):
     while(True):
         if not q.full():
             filename = images[ii]
+            print (filename, q.qsize(), ii)
             x = cv2.imread(filename)
             y = get_boxes(labels_table[filename])
-            q.put((x, y))
             ii = (ii + 1) if (ii < last) else 0
+            q.put((x, y))
 
 #########################################
 
 class LoadMOT:
 
     def __init__(self):
-        self.train_images = get_images(path + 'train')
+        self.train_images = sorted(get_images(path + 'train'))
         self.train_labels_table = get_labels_table(train_folders)
 
-        self.test_images = get_images(path + 'test')
+        self.test_images = sorted(get_images(path + 'test'))
         self.test_labels_table = get_labels_table(test_folders)
 
         self.q = queue.Queue(maxsize=128)

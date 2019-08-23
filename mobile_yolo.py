@@ -62,6 +62,8 @@ def avg_pool(x, s):
 def batch_norm(x, f, name):
     gamma = tf.Variable(weight_dict[name+'_gamma'+':0'], dtype=tf.float32, name=name+'_gamma')
     beta = tf.Variable(weight_dict[name+'_beta'+':0'], dtype=tf.float32, name=name+'_beta')
+    # gamma = tf.Variable(np.ones(shape=f), dtype=tf.float32)
+    # beta = tf.Variable(np.zeros(shape=f), dtype=tf.float32)
 
     mean = tf.reduce_mean(x, axis=[0,1,2])
     _, var = tf.nn.moments(x - mean, axes=[0,1,2])
@@ -117,20 +119,23 @@ block10 = mobile_block(block9, 512, 512, 1, 'block10')    # 14  16
 block11 = mobile_block(block10, 512, 512, 1, 'block11')   # 14  16
 block12 = mobile_block(block11, 512, 512, 1, 'block12')   # 14  16
 
-flat   = tf.reshape(block12, [batch_size, 512*16*9])
+flat   = tf.reshape(block12, [1, 512*16*9])
 
 mat1   = tf.Variable(init_matrix(size=(512*16*9, 4096), init='alexnet'), dtype=tf.float32, name='fc1')
 bias1  = tf.Variable(np.zeros(shape=4096), dtype=tf.float32, name='fc1_bias')
 fc1    = tf.matmul(flat, mat1) + bias1
+relu1  = tf.nn.relu(fc1)
 
 mat2   = tf.Variable(init_matrix(size=(4096, 16*9*10), init='alexnet'), dtype=tf.float32, name='fc2')
 bias2  = tf.Variable(np.zeros(shape=16*9*10), dtype=tf.float32, name='fc2_bias')
-fc2    = tf.matmul(fc1, mat2) + bias2
+fc2    = tf.matmul(relu1, mat2) + bias2
+
+out    = tf.reshape(fc2, [1, 16, 9, 10])
 
 ###############################################################
 
-loss = yolo_loss(block10, coords_ph, obj_ph, no_obj_ph)
-train = tf.train.AdamOptimizer(learning_rate=0.001, epsilon=1.).minimize(loss)
+loss = yolo_loss(out, coords_ph, obj_ph, no_obj_ph)
+# train = tf.train.AdamOptimizer(learning_rate=0.001, epsilon=1.).minimize(loss)
 params = tf.trainable_variables()
 
 ###############################################################
@@ -155,9 +160,10 @@ while True:
         image = np.transpose(image, [1, 0, 2])
         image = np.reshape(image, [1, 1920, 1080, 3])
 
-        [l, _] = sess.run([loss, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
+        [p, l] = sess.run([out, loss], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
         # print (np.shape(l))
         print (l)
+        print (np.std(p), np.shape(p))
 
 ###############################################################
 
