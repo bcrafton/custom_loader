@@ -36,6 +36,8 @@ from bc_utils.init_tensor import init_matrix
 from LoadMOT import LoadMOT
 from yolo_loss import yolo_loss
 
+from collections import deque
+
 ##############################################
 
 loader = LoadMOT()
@@ -61,8 +63,8 @@ def avg_pool(x, s):
 
 def batch_norm(x, f, name, load):
     if load:
-        gamma = tf.Variable(load[name+'_gamma'+':0'], dtype=tf.float32, name=name+'_gamma')
-        beta = tf.Variable(load[name+'_beta'+':0'], dtype=tf.float32, name=name+'_beta')
+        gamma = tf.Variable(load[name+'_gamma'+':0'], dtype=tf.float32, name=name+'_gamma', trainable=False)
+        beta = tf.Variable(load[name+'_beta'+':0'], dtype=tf.float32, name=name+'_beta', trainable=False)
     else:
         gamma = tf.Variable(np.ones(shape=f), dtype=tf.float32)
         beta = tf.Variable(np.zeros(shape=f), dtype=tf.float32)
@@ -74,7 +76,7 @@ def batch_norm(x, f, name, load):
 
 def block(x, f1, f2, p, name, load):
     if load:
-        filters = tf.Variable(load[name+'_conv'+':0'], dtype=tf.float32, name=name+'_conv')
+        filters = tf.Variable(load[name+'_conv'+':0'], dtype=tf.float32, name=name+'_conv', trainable=False)
     else:
         filters = tf.Variable(init_filters(size=[3,3,f1,f2], init='alexnet'), dtype=tf.float32, name=name+'_conv')
 
@@ -86,8 +88,8 @@ def block(x, f1, f2, p, name, load):
 def mobile_block(x, f1, f2, p, name, load):
     print (name)
     if load:
-        filters1 = tf.Variable(load[name+'_conv_dw'+':0'], dtype=tf.float32, name=name+'_conv_dw')
-        filters2 = tf.Variable(load[name+'_conv_pw'+':0'], dtype=tf.float32, name=name+'_conv_pw')
+        filters1 = tf.Variable(load[name+'_conv_dw'+':0'], dtype=tf.float32, name=name+'_conv_dw', trainable=False)
+        filters2 = tf.Variable(load[name+'_conv_pw'+':0'], dtype=tf.float32, name=name+'_conv_pw', trainable=False)
     else:
         filters1 = tf.Variable(init_filters(size=[3,3,f1,1], init='alexnet'), dtype=tf.float32)
         filters2 = tf.Variable(init_filters(size=[1,1,f1,f2], init='alexnet'), dtype=tf.float32)
@@ -133,6 +135,10 @@ block13 = mobile_block(block12, 512, 256, 1, 'block13', None) #     16
 block14 = mobile_block(block13, 256, 128, 1, 'block14', None) #     16
 block15 = mobile_block(block14, 128, 64,  1, 'block15', None) #     16
 
+block16 = mobile_block(block15, 64, 10,  1, 'block16', None)  #     16
+out = block16
+
+'''
 flat   = tf.reshape(block15, [1, 64*16*9])
 
 mat1   = tf.Variable(init_matrix(size=(64*16*9, 4096), init='alexnet'), dtype=tf.float32, name='fc1')
@@ -145,11 +151,13 @@ bias2  = tf.Variable(np.zeros(shape=16*9*10), dtype=tf.float32, name='fc2_bias')
 fc2    = tf.matmul(relu1, mat2) + bias2
 
 out    = tf.reshape(fc2, [1, 16, 9, 10])
+'''
+
 
 ###############################################################
 
 loss = yolo_loss(out, coords_ph, obj_ph, no_obj_ph)
-# train = tf.train.AdamOptimizer(learning_rate=0.001, epsilon=1.).minimize(loss)
+train = tf.train.AdamOptimizer(learning_rate=0.001, epsilon=1.).minimize(loss)
 params = tf.trainable_variables()
 
 ###############################################################
@@ -168,16 +176,20 @@ assert (False)
 
 ###############################################################
 
+counter = 0
+losses = deque(maxlen=100)
+
 while True:
     if not loader.empty():
         image, (coords, obj, no_obj) = loader.pop()
-        image = np.transpose(image, [1, 0, 2])
-        image = np.reshape(image, [1, 1920, 1080, 3])
+        # image = np.transpose(image, [1, 0, 2])
+        # image = np.reshape(image, [1, 1920, 1080, 3])
 
-        [p, l] = sess.run([out, loss], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
-        # print (np.shape(l))
-        print (l)
-        print (np.std(p), np.shape(p))
+        [p, l, _] = sess.run([out, loss, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
+        losses.append(l)
+        counter = counter + 1
+        if (counter % 100 == 0):
+            print (np.average(losses))
 
 ###############################################################
 
