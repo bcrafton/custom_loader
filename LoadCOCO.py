@@ -87,12 +87,17 @@ def preprocess(filename, table):
         w = w * scale_w
         h = h * scale_h
 
-        if not (x <= 448 and y <= 448 and w <= 448 and h <= 448):
+        if not (x <= 448.1 and y <= 448.1 and w <= 448.1 and h <= 448.1):
             print (x, y, w, h, shape, scale_w, scale_h)
-            assert(x <= 448 and y <= 448 and w <= 448 and h <= 448)
+            assert(x <= 448.1 and y <= 448.1 and w <= 448.1 and h <= 448.1)
 
         xc = int(x) // 64
         yc = int(y) // 64
+
+        x = x / 448.
+        y = y / 448.
+        w = w / 448.
+        h = h / 448.
 
         coords[ii, xc, yc, :] = np.array([x, y, w, h, 1.])
         obj[ii, xc, yc] = 1.

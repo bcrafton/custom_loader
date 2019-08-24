@@ -133,6 +133,10 @@ block12 = mobile_block(block11, 512, 512, 1, 'block12', wd)   # 14  14
 block13 = mobile_block(block12, 512, 512, 2, 'block13', None) #     7
 block14 = mobile_block(block13, 512, 512, 1, 'block14', None) #     7
 
+block15 = mobile_block(block14, 512, 10, 1, 'block15', None) #     7
+out = block15
+
+'''
 flat   = tf.reshape(block14, [1, 7*7*512])
 
 mat1   = tf.Variable(init_matrix(size=(7*7*512, 4096), init='glorot_uniform'), dtype=tf.float32, name='fc1')
@@ -145,6 +149,8 @@ bias2  = tf.Variable(np.zeros(shape=7*7*10), dtype=tf.float32, name='fc2_bias')
 fc2    = tf.matmul(relu1, mat2) + bias2
 
 out    = tf.reshape(fc2, [1, 7, 7, 10])
+'''
+
 
 ###############################################################
 

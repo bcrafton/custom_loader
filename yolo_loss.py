@@ -59,25 +59,25 @@ def yolo_loss(pred, label, obj, no_obj):
 
     loss_xy1 = tf.reduce_sum(tf.square(pred_xy1 - label_xy), 3)
     loss_xy2 = tf.reduce_sum(tf.square(pred_xy2 - label_xy), 3)
-    xy_loss = obj * tf.where(resp_box, loss_xy1, loss_xy2)
+    xy_loss = 5. * obj * tf.where(resp_box, loss_xy1, loss_xy2)
 
     ######################################
 
     loss_wh1 = tf.reduce_sum(tf.square(pred_wh1 - label_wh), 3)
     loss_wh2 = tf.reduce_sum(tf.square(pred_wh2 - label_wh), 3)
-    wh_loss = obj * tf.where(resp_box, loss_wh1, loss_wh2)
+    wh_loss = 5. * obj * tf.where(resp_box, loss_wh1, loss_wh2)
 
     ######################################
 
     loss_obj1 = tf.square(pred_conf1 - label_conf)
     loss_obj2 = tf.square(pred_conf2 - label_conf)
-    obj_loss = obj * tf.where(resp_box, loss_obj1, loss_obj2)
+    obj_loss = 1. * obj * tf.where(resp_box, loss_obj1, loss_obj2)
 
     ######################################    
 
     loss_no_obj1 = tf.square(pred_conf1 - label_conf)
     loss_no_obj2 = tf.square(pred_conf2 - label_conf)
-    no_obj_loss = no_obj * tf.where(resp_box, loss_no_obj1, loss_no_obj2)
+    no_obj_loss = 0.5 * no_obj * tf.where(resp_box, loss_no_obj1, loss_no_obj2)
 
     ######################################
 
