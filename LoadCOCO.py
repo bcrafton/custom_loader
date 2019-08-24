@@ -41,16 +41,17 @@ def get_images(path):
 
 #########################################
 
-def get_labels_table(json_file):
+def get_labels_table(json_filename):
     table = {}
 
-    annotations = list(data['annotations'])
+    json_file = json.load(json_filename)
+    annotations = list(json_file['annotations'])
     for annotation in annotations:
         image_id = annotation['image_id']
         bbox = annotation['bbox']
         image_filename = 'COCO_train2014_%012d.jpg' % (int(image_id))
 
-        if image_filename in table.keys()
+        if image_filename in table.keys():
             table[image_filename].append(bbox)
         else:
             table[image_filename] = [bbox]
@@ -109,11 +110,11 @@ def fill_queue(images, labels_table, q):
 class LoadCOCO:
 
     def __init__(self):
-        self.train_images = sorted(get_images(path + 'train'))
-        self.test_images = sorted(get_images(path + 'test'))
+        self.train_images = sorted(get_images(path + 'train_images'))
+        # self.test_images = sorted(get_images(path + 'test'))
 
-        self.train_labels_table = get_labels_table(train_folders)
-        self.test_labels_table = get_labels_table(test_folders)
+        self.train_labels_table = get_labels_table(path + 'train_labels/instances_train2014.json')
+        # self.test_labels_table = get_labels_table(test_folders)
 
         self.q = queue.Queue(maxsize=128)
         thread = threading.Thread(target=fill_queue, args=(self.train_images, self.train_labels_table, self.q))
