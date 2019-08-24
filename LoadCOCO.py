@@ -13,13 +13,13 @@ import json
 
 #########################################
 
-exxact = 1
-local = 0
+exxact = 0
+icsrl2 = 1
 
 if exxact:
     path = '/home/bcrafton3/Data_HDD/mscoco/'
-elif local:
-    assert(False)
+elif icsrl2:
+    path = '/usr/scratch/bcrafton/mscoco/'
 else:
     assert(False)
 
@@ -110,7 +110,7 @@ def fill_queue(images, table, q):
             filename = images[ii]
             ii = (ii + 1) if (ii < last) else 0
 
-            print (filename, ii)
+            # print (filename, ii, q.qsize())
 
             if filename in table.keys():
                 image, label = preprocess(filename, table)
