@@ -40,7 +40,7 @@ from collections import deque
 
 ##############################################
 
-loader = LoadMOT()
+loader = LoadCOCO()
 wd = np.load(args.load, allow_pickle=True).item()
 
 ##############################################
@@ -106,53 +106,45 @@ def mobile_block(x, f1, f2, p, name, load):
 
 ###############################################################
 
-image_ph  = tf.placeholder(tf.float32, [1, 1920, 1080, 3])
-coords_ph = tf.placeholder(tf.float32, [None, 16, 9, 5])
-obj_ph    = tf.placeholder(tf.float32, [None, 16, 9])
-no_obj_ph = tf.placeholder(tf.float32, [None, 16, 9])
+image_ph  = tf.placeholder(tf.float32, [1, 448, 448, 3])
+coords_ph = tf.placeholder(tf.float32, [None, 7, 7, 5])
+obj_ph    = tf.placeholder(tf.float32, [None, 7, 7])
+no_obj_ph = tf.placeholder(tf.float32, [None, 7, 7])
 
-bn     = batch_norm(image_ph, 3, 'bn0', None)                 # 224 1920
+bn     = batch_norm(image_ph, 3, 'bn0', None)                 # 224 448
 
-pool1  = avg_pool(bn, 5)                                      #     1920
-block1 = block(pool1, 3, 32, 3, 'block1', wd)                 # 224 384
+block1 = block(bn, 3, 32, 2, 'block1', wd)                    # 224 448
 
-block2 = mobile_block(block1, 32, 64, 1, 'block2', wd)        # 112 128
-block3 = mobile_block(block2, 64, 128, 2, 'block3', wd)       # 112 128
+block2 = mobile_block(block1, 32, 64, 1, 'block2', wd)        # 112 224
+block3 = mobile_block(block2, 64, 128, 2, 'block3', wd)       # 112 224
 
-block4 = mobile_block(block3, 128, 128, 1, 'block4', wd)      # 56  64
-block5 = mobile_block(block4, 128, 256, 2, 'block5', wd)      # 56  64
+block4 = mobile_block(block3, 128, 128, 1, 'block4', wd)      # 56  112
+block5 = mobile_block(block4, 128, 256, 2, 'block5', wd)      # 56  112
 
-block6 = mobile_block(block5, 256, 256, 1, 'block6', wd)      # 28  32
-block7 = mobile_block(block6, 256, 512, 2, 'block7', wd)      # 28  32
+block6 = mobile_block(block5, 256, 256, 1, 'block6', wd)      # 28  56
+block7 = mobile_block(block6, 256, 512, 2, 'block7', wd)      # 28  56
 
-block8 = mobile_block(block7, 512, 512, 1, 'block8', wd)      # 14  16
-block9 = mobile_block(block8, 512, 512, 1, 'block9', wd)      # 14  16
-block10 = mobile_block(block9, 512, 512, 1, 'block10', wd)    # 14  16
-block11 = mobile_block(block10, 512, 512, 1, 'block11', wd)   # 14  16
-block12 = mobile_block(block11, 512, 512, 1, 'block12', wd)   # 14  16
+block8 = mobile_block(block7, 512, 512, 1, 'block8', wd)      # 14  28
+block9 = mobile_block(block8, 512, 512, 2, 'block9', wd)      # 14  28
+block10 = mobile_block(block9, 512, 512, 1, 'block10', wd)    # 14  14
+block11 = mobile_block(block10, 512, 512, 1, 'block11', wd)   # 14  14
+block12 = mobile_block(block11, 512, 512, 1, 'block12', wd)   # 14  14
 
-block13 = mobile_block(block12, 512, 256, 1, 'block13', None) #     16
-block14 = mobile_block(block13, 256, 128, 1, 'block14', None) #     16
-block15 = mobile_block(block14, 128, 64,  1, 'block15', None) #     16
+block13 = mobile_block(block12, 512, 512, 2, 'block13', None) #     7
+block14 = mobile_block(block13, 512, 512, 1, 'block14', None) #     7
 
-block16 = mobile_block(block15, 64, 10,  1, 'block16', None)  #     16
-out = block16
+flat   = tf.reshape(block14, [1, 7*7*512])
 
-'''
-flat   = tf.reshape(block15, [1, 64*16*9])
-
-mat1   = tf.Variable(init_matrix(size=(64*16*9, 4096), init='alexnet'), dtype=tf.float32, name='fc1')
+mat1   = tf.Variable(init_matrix(size=(7*7*512, 4096), init='glorot_uniform'), dtype=tf.float32, name='fc1')
 bias1  = tf.Variable(np.zeros(shape=4096), dtype=tf.float32, name='fc1_bias')
 fc1    = tf.matmul(flat, mat1) + bias1
 relu1  = tf.nn.relu(fc1)
 
-mat2   = tf.Variable(init_matrix(size=(4096, 16*9*10), init='alexnet'), dtype=tf.float32, name='fc2')
-bias2  = tf.Variable(np.zeros(shape=16*9*10), dtype=tf.float32, name='fc2_bias')
+mat2   = tf.Variable(init_matrix(size=(4096, 7*7*10), init='glorot_uniform'), dtype=tf.float32, name='fc2')
+bias2  = tf.Variable(np.zeros(shape=7*7*10), dtype=tf.float32, name='fc2_bias')
 fc2    = tf.matmul(relu1, mat2) + bias2
 
-out    = tf.reshape(fc2, [1, 16, 9, 10])
-'''
-
+out    = tf.reshape(fc2, [1, 7, 7, 10])
 
 ###############################################################
 
@@ -182,8 +174,6 @@ losses = deque(maxlen=100)
 while True:
     if not loader.empty():
         image, (coords, obj, no_obj) = loader.pop()
-        # image = np.transpose(image, [1, 0, 2])
-        # image = np.reshape(image, [1, 1920, 1080, 3])
 
         [p, l, _] = sess.run([out, loss, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
         losses.append(l)
