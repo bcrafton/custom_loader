@@ -64,7 +64,8 @@ def get_labels_table(json_filename):
 def preprocess(filename, table):
     # image
     image = cv2.imread(filename)
-    (w, h, _) = np.shape(image)
+    shape = np.shape(image)
+    (w, h, _) = shape
     image = cv2.resize(image, (448, 448))
     scale_w = 448 / w
     scale_h = 448 / h
@@ -72,18 +73,22 @@ def preprocess(filename, table):
     # labels
     labels = table[filename]
     nlabels = len(labels)
-    coords  = np.zeros(shape=[nlabels, 16, 9, 5])
-    obj     = np.zeros(shape=[nlabels, 16, 9])
-    no_obj  = np.ones(shape=[nlabels, 16, 9])
+    coords  = np.zeros(shape=[nlabels, 7, 7, 5])
+    obj     = np.zeros(shape=[nlabels, 7, 7])
+    no_obj  = np.ones(shape=[nlabels, 7, 7])
 
     for ii in range(nlabels):
         label = labels[ii]
-        [x, y, w, h] = label
+        [y, x, h, w] = label
 
         x = x * scale_w
         y = y * scale_h
         w = w * scale_w
         h = h * scale_h
+
+        if not (x <= 448 and y <= 448 and w <= 448 and h <= 448):
+            print (x, y, w, h, shape, scale_w, scale_h)
+            assert(x <= 448 and y <= 448 and w <= 448 and h <= 448)
 
         xc = int(x) // 64
         yc = int(y) // 64
@@ -104,6 +109,8 @@ def fill_queue(images, table, q):
         if not q.full():
             filename = images[ii]
             ii = (ii + 1) if (ii < last) else 0
+
+            print (filename, ii)
 
             if filename in table.keys():
                 image, label = preprocess(filename, table)
