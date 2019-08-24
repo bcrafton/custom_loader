@@ -50,7 +50,7 @@ def get_labels_table(json_filename):
     for annotation in annotations:
         image_id = annotation['image_id']
         bbox = annotation['bbox']
-        image_filename = 'COCO_train2014_%012d.jpg' % (int(image_id))
+        image_filename = path + 'train_images/COCO_train2014_%012d.jpg' % (int(image_id))
 
         if image_filename in table.keys():
             table[image_filename].append(bbox)
@@ -61,17 +61,22 @@ def get_labels_table(json_filename):
 
 #########################################
 
-def get_boxes(labels):
+def preprocess(filename, table):
     nlabels = len(labels)
 
     coords  = np.zeros(shape=[nlabels, 16, 9, 5])
     obj     = np.zeros(shape=[nlabels, 16, 9])
-    no_obj  = np.zeros(shape=[nlabels, 16, 9])
+    no_obj  = np.ones(shape=[nlabels, 16, 9])
 
     for ii in range(nlabels):
-        coords[ii, x, y, :] = np.array([l, t, h, w, 1.])
-        obj[ii, x, y] = 1.
-        no_obj[ii] = np.ones(shape=[16, 9]) - obj[ii]
+        label = labels[ii]
+        [x, y, w, h] = label
+        xc = int(x) // 64
+        yc = int(y) // 64
+
+        coords[ii, xc, yc, :] = np.array([x, y, w, h, 1.])
+        obj[ii, xc, yc] = 1.
+        no_obj[ii, xc, yc] = 0.
 
     return (coords, obj, no_obj)
 
@@ -86,9 +91,11 @@ def fill_queue(images, labels_table, q):
             filename = images[ii]
             ii = (ii + 1) if (ii < last) else 0
 
+            print (filename, ii)
+
             image = cv2.imread(filename)
-            w, h, _ = np.shape(image)
-            image = cv2.resize(image, [448, 448])
+            (w, h, _) = np.shape(image)
+            image = cv2.resize(image, (448, 448))
 
             scale_w = 448 / w
             scale_h = 448 / h
@@ -112,6 +119,8 @@ class LoadCOCO:
 
         self.train_labels_table = get_labels_table(path + 'train_labels/instances_train2014.json')
         # self.test_labels_table = get_labels_table(test_folders)
+
+        # print (self.train_labels_table.keys())
 
         self.q = queue.Queue(maxsize=128)
         thread = threading.Thread(target=fill_queue, args=(self.train_images, self.train_labels_table, self.q))
