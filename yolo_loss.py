@@ -6,8 +6,8 @@ def iou_train(boxA, boxB, realBox):
     Calculate IoU between boxA and realBox
     Calculate the IoU in training phase, to get the box (out of N boxes per grid) responsible for ground truth box
     """
-    iou1 = tf.reshape(iou_train_unit(boxA, realBox), [-1, 16, 9, 1])
-    iou2 = tf.reshape(iou_train_unit(boxB, realBox), [-1, 16, 9, 1])
+    iou1 = tf.reshape(iou_train_unit(boxA, realBox), [-1, 7, 7, 1])
+    iou2 = tf.reshape(iou_train_unit(boxB, realBox), [-1, 7, 7, 1])
     return tf.concat([iou1, iou2], 3)
 
 def iou_train_unit(boxA, realBox):
@@ -32,7 +32,7 @@ def yolo_loss(pred, label, obj, no_obj):
     # shape(obj)    = [1, 16, 9]
     # shape(no_obj) = [1, 16, 9]
 
-    pred   = tf.reshape(pred,   [-1, 16, 9, 5, 2])
+    pred   = tf.reshape(pred,   [-1, 7, 7, 5, 2])
 
     ######################################
 

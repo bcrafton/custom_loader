@@ -33,7 +33,7 @@ from bc_utils.conv_utils import conv_input_length
 from bc_utils.init_tensor import init_filters
 from bc_utils.init_tensor import init_matrix
 
-from LoadMOT import LoadMOT
+from LoadCOCO import LoadCOCO
 from yolo_loss import yolo_loss
 
 from collections import deque

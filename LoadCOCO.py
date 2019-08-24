@@ -67,6 +67,7 @@ def preprocess(filename, table):
     shape = np.shape(image)
     (w, h, _) = shape
     image = cv2.resize(image, (448, 448))
+    image = np.reshape(image, [1, 448, 448, 3])
     scale_w = 448 / w
     scale_h = 448 / h
 
