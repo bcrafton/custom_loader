@@ -86,24 +86,21 @@ def fill_queue(images, labels_table, q):
             filename = images[ii]
             ii = (ii + 1) if (ii < last) else 0
 
-            x = cv2.imread(filename)
-            shape = np.shape(x)
+            image = cv2.imread(filename)
+            w, h, _ = np.shape(image)
+            image = cv2.resize(image, [448, 448])
 
-            if   shape == (480, 640, 3):
-                pass
-            else:
-                print ('skipping: %s' % (filename), shape)
-                continue
-
-            print (shape)
+            scale_w = 448 / w
+            scale_h = 448 / h
 
             if filename in labels_table.keys():
-                y = get_boxes(labels_table[filename])
+                [x, y, w, h, c] = get_boxes(labels_table[filename])
+                label = [x * scale_w, y * scale_h, w * scale_w, h * scale_h, c]
             else:
                 print ('no label: %s' % (filename))
                 continue
 
-            q.put((x, y))
+            q.put((image, label))
 
 #########################################
 
@@ -111,7 +108,6 @@ class LoadCOCO:
 
     def __init__(self):
         self.train_images = sorted(get_images(path + 'train_images'))
-        print (len(self.train_images))
         # self.test_images = sorted(get_images(path + 'test'))
 
         self.train_labels_table = get_labels_table(path + 'train_labels/instances_train2014.json')
