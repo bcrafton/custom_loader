@@ -121,7 +121,7 @@ def fill_queue(images, table, q):
             if filename in table.keys():
                 image, label = preprocess(filename, table)
             else:
-                print ('no label: %s' % (filename))
+                # print ('no label: %s' % (filename))
                 continue
 
             q.put((image, label))

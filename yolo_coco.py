@@ -74,6 +74,17 @@ def batch_norm(x, f, name, load):
     bn = tf.nn.batch_normalization(x=x, mean=mean, variance=var, offset=beta, scale=gamma, variance_epsilon=1e-3)
     return bn
 
+'''
+def batch_norm_dense(x, n, name):
+    gamma = tf.Variable(np.ones(shape=n), dtype=tf.float32)
+    beta = tf.Variable(np.zeros(shape=n), dtype=tf.float32)
+
+    mean = tf.reduce_mean(x, axis=[0])
+    _, var = tf.nn.moments(x - mean, axes=[0])
+    bn = tf.nn.batch_normalization(x=x, mean=mean, variance=var, offset=beta, scale=gamma, variance_epsilon=1e-3)
+    return bn
+'''
+
 def block(x, f1, f2, p, name, load):
     if load:
         filters = tf.Variable(load[name+'_conv'+':0'], dtype=tf.float32, name=name+'_conv', trainable=False)
@@ -104,6 +115,14 @@ def mobile_block(x, f1, f2, p, name, load):
 
     return relu2
 
+'''
+def dense(x, n_in, n_out, name):
+    mat   = tf.Variable(init_matrix(size=(n_in, n_out), init='glorot_normal'), dtype=tf.float32, name=name)
+    bias  = tf.Variable(np.zeros(shape=n_out), dtype=tf.float32, name=name+'_bias')
+    fc    = tf.matmul(x, mat) + bias
+    return out 
+'''
+
 ###############################################################
 
 image_ph  = tf.placeholder(tf.float32, [1, 448, 448, 3])
@@ -130,27 +149,50 @@ block10 = mobile_block(block9, 512, 512, 1, 'block10', wd)    # 14  14
 block11 = mobile_block(block10, 512, 512, 1, 'block11', wd)   # 14  14
 block12 = mobile_block(block11, 512, 512, 1, 'block12', wd)   # 14  14
 
-block13 = mobile_block(block12, 512, 512, 2, 'block13', None) #     7
-block14 = mobile_block(block13, 512, 512, 1, 'block14', None) #     7
-
-block15 = mobile_block(block14, 512, 10, 1, 'block15', None) #     7
-out = block15
+block13 = mobile_block(block12, 512, 512, 2, 'block13', None) #      7
+block14 = mobile_block(block13, 512, 512, 1, 'block14', None) #      7
 
 '''
+block15 = mobile_block(block14, 512, 10, 1, 'block15', None) #     7
+out = block15
+'''
+
+mat1   = tf.Variable(init_matrix(size=(7*7*512, 4096), init='glorot_normal'), dtype=tf.float32, name='fc1')
+bias1  = tf.Variable(np.zeros(shape=4096), dtype=tf.float32, name='fc1_bias')
+mat2   = tf.Variable(init_matrix(size=(4096, 7*7*10), init='glorot_normal'), dtype=tf.float32, name='fc2')
+bias2  = tf.Variable(np.zeros(shape=7*7*10), dtype=tf.float32, name='fc2_bias')
+
 flat   = tf.reshape(block14, [1, 7*7*512])
 
-mat1   = tf.Variable(init_matrix(size=(7*7*512, 4096), init='glorot_uniform'), dtype=tf.float32, name='fc1')
-bias1  = tf.Variable(np.zeros(shape=4096), dtype=tf.float32, name='fc1_bias')
 fc1    = tf.matmul(flat, mat1) + bias1
 relu1  = tf.nn.relu(fc1)
 
-mat2   = tf.Variable(init_matrix(size=(4096, 7*7*10), init='glorot_uniform'), dtype=tf.float32, name='fc2')
-bias2  = tf.Variable(np.zeros(shape=7*7*10), dtype=tf.float32, name='fc2_bias')
 fc2    = tf.matmul(relu1, mat2) + bias2
+relu2  = tf.nn.relu(fc2)
 
-out    = tf.reshape(fc2, [1, 7, 7, 10])
+out    = tf.reshape(relu2, [1, 7, 7, 10])
+
 '''
+mat1   = tf.Variable(init_matrix(size=(7*7*512, 512), init='glorot_normal'), dtype=tf.float32, name='fc1')
+bias1  = tf.Variable(np.zeros(shape=512), dtype=tf.float32, name='fc1_bias')
+mat2   = tf.Variable(init_matrix(size=(512, 4096), init='glorot_normal'), dtype=tf.float32, name='fc2')
+bias2  = tf.Variable(np.zeros(shape=4096), dtype=tf.float32, name='fc2_bias')
+mat3   = tf.Variable(init_matrix(size=(4096, 7*7*10), init='glorot_normal'), dtype=tf.float32, name='fc3')
+bias3  = tf.Variable(np.zeros(shape=7*7*10), dtype=tf.float32, name='fc3_bias')
 
+flat   = tf.reshape(block14, [1, 7*7*512])
+
+fc1    = tf.matmul(flat, mat1) + bias1
+relu1  = tf.nn.relu(fc1)
+
+fc2    = tf.matmul(relu1, mat2) + bias2
+relu2  = tf.nn.relu(fc2)
+
+fc3    = tf.matmul(relu2, mat3) + bias3
+relu3  = tf.nn.relu(fc3)
+
+out    = tf.reshape(relu3, [1, 7, 7, 10])
+'''
 
 ###############################################################
 
@@ -182,6 +224,13 @@ while True:
         image, (coords, obj, no_obj) = loader.pop()
 
         [p, l, _] = sess.run([out, loss, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
+
+        print (l, np.max(p), np.min(p), np.std(p))
+
+        if (np.any(coords < 0.) or np.any(coords > 1.1)):
+            print (coords)
+            assert(not (np.any(coords < 0.) or np.any(coords > 1.1)))
+
         losses.append(l)
         counter = counter + 1
         if (counter % 100 == 0):
