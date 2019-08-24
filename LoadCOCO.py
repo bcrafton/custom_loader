@@ -29,13 +29,11 @@ def get_images(path):
 
     images = []
     for subdir, dirs, files in os.walk(path):
-        for folder in dirs:
-            for folder_subdir, folder_dirs, folder_files in os.walk(os.path.join(subdir, folder)):
-                for file in folder_files:
-                    if 'jpg' in file:
-                        full_path = os.path.join(folder_subdir, file)
-                        if (full_path not in images):
-                            images.append(full_path)
+        for file in files:
+            if 'jpg' in file:
+                full_path = os.path.join(subdir, file)
+                if (full_path not in images):
+                    images.append(full_path)
 
     return images
 
@@ -44,8 +42,11 @@ def get_images(path):
 def get_labels_table(json_filename):
     table = {}
 
-    json_file = json.load(json_filename)
-    annotations = list(json_file['annotations'])
+    json_file = open(json_filename)
+    data = json.load(json_file)
+    annotations = list(data['annotations'])
+    json_file.close()
+
     for annotation in annotations:
         image_id = annotation['image_id']
         bbox = annotation['bbox']
@@ -87,15 +88,14 @@ def fill_queue(images, labels_table, q):
 
             x = cv2.imread(filename)
             shape = np.shape(x)
-            if   shape == (1920, 1080, 3):
+
+            if   shape == (480, 640, 3):
                 pass
-            elif shape == (1080, 1920, 3):
-                x = np.transpose(x, [1, 0, 2])
             else:
-                print ('skipping: %s' % (filename))
+                print ('skipping: %s' % (filename), shape)
                 continue
 
-            x = np.reshape(x, (1, 1920, 1080, 3))
+            print (shape)
 
             if filename in labels_table.keys():
                 y = get_boxes(labels_table[filename])
@@ -111,6 +111,7 @@ class LoadCOCO:
 
     def __init__(self):
         self.train_images = sorted(get_images(path + 'train_images'))
+        print (len(self.train_images))
         # self.test_images = sorted(get_images(path + 'test'))
 
         self.train_labels_table = get_labels_table(path + 'train_labels/instances_train2014.json')
