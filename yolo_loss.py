@@ -32,25 +32,25 @@ def yolo_loss(pred, label, obj, no_obj):
     # shape(obj)    = [1, 16, 9]
     # shape(no_obj) = [1, 16, 9]
 
-    pred   = tf.reshape(pred,   [-1, 7, 7, 5, 2])
+    pred   = tf.reshape(pred,   [-1, 7, 7, 2, 5])
 
     ######################################
 
     label_box = label[:, :, :, 0:4]
-    pred_box1 = pred[:, :, :, 0:4, 0]
-    pred_box2 = pred[:, :, :, 0:4, 1]
+    pred_box1 = pred[:, :, :, 0, 0:4]
+    pred_box2 = pred[:, :, :, 1, 0:4]
 
     label_xy = label[:, :, :, 0:2]
-    pred_xy1 = pred[:, :, :, 0:2, 0]
-    pred_xy2 = pred[:, :, :, 0:2, 1]
+    pred_xy1 = pred[:, :, :, 0, 0:2]
+    pred_xy2 = pred[:, :, :, 1, 0:2]
 
     label_wh = tf.sqrt(label[:, :, :, 2:4])
-    pred_wh1 = tf.sqrt(pred[:, :, :, 2:4, 0])
-    pred_wh2 = tf.sqrt(pred[:, :, :, 2:4, 1])
+    pred_wh1 = tf.sqrt(pred[:, :, :, 0, 2:4])
+    pred_wh2 = tf.sqrt(pred[:, :, :, 1, 2:4])
 
     label_conf = label[:, :, :, 4]
-    pred_conf1 = pred[:, :, :, 4, 0]
-    pred_conf2 = pred[:, :, :, 4, 1]
+    pred_conf1 = pred[:, :, :, 0, 4]
+    pred_conf2 = pred[:, :, :, 1, 4]
 
     iou = iou_train(pred_box1, pred_box2, label_box)
     resp_box = tf.greater(iou[:, :, :, 0], iou[:, :, :, 1])
