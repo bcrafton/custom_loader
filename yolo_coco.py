@@ -173,9 +173,9 @@ fc1    = tf.matmul(flat, mat1) + bias1
 relu1  = tf.nn.relu(fc1)
 
 fc2    = tf.matmul(relu1, mat2) + bias2
-relu2  = tf.nn.relu(fc2)
+sig2   = tf.math.sigmoid(fc2)
 
-out    = tf.reshape(relu2, [1, 7, 7, 10])
+out    = tf.reshape(sig2, [1, 7, 7, 10])
 
 ###############################################################
 
