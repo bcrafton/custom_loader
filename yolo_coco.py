@@ -35,6 +35,7 @@ from bc_utils.init_tensor import init_matrix
 
 from LoadCOCO import LoadCOCO
 from yolo_loss import yolo_loss
+from draw_boxes import draw_boxes
 
 from collections import deque
 
@@ -249,10 +250,12 @@ while True:
         losses.append(l)
         counter = counter + 1
 
+        if (counter % 100 == 0):
+            draw_boxes('%d.jpg' % (counter), image, p)
+
         if (counter % 10000 == 0):
             print (np.average(losses))
 
-        if (counter % 10000 == 0):
             [w] = sess.run([weights], feed_dict={})
             np.save('yolo_weights', w)
 
