@@ -109,12 +109,19 @@ def preprocess(filename, table):
 
 def fill_queue(images, table, q):
     ii = 0
+    epoch = 0
     last = len(images) - 1
 
     while(True):
         if not q.full():
             filename = images[ii]
-            ii = (ii + 1) if (ii < last) else 0
+            # ii = (ii + 1) if (ii < last) else 0
+            if ii < last:
+                ii = ii + 1
+            else:
+                ii = 0
+                epoch = epoch + 1
+                print (epoch) 
 
             # print (filename, ii, q.qsize())
 

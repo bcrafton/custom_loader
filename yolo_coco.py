@@ -9,7 +9,7 @@ import sys
 parser = argparse.ArgumentParser()
 parser.add_argument('--epochs', type=int, default=10)
 parser.add_argument('--batch_size', type=int, default=32)
-parser.add_argument('--lr', type=float, default=2e-3)
+parser.add_argument('--lr', type=float, default=1e-3)
 parser.add_argument('--eps', type=float, default=1.)
 parser.add_argument('--gpu', type=int, default=0)
 parser.add_argument('--load', type=str, default='MobileNet224_weights.npy')
@@ -66,8 +66,8 @@ def batch_norm(x, f, name, load):
         gamma = tf.Variable(load[name+'_gamma'+':0'], dtype=tf.float32, name=name+'_gamma', trainable=False)
         beta = tf.Variable(load[name+'_beta'+':0'], dtype=tf.float32, name=name+'_beta', trainable=False)
     else:
-        gamma = tf.Variable(np.ones(shape=f), dtype=tf.float32)
-        beta = tf.Variable(np.zeros(shape=f), dtype=tf.float32)
+        gamma = tf.Variable(np.ones(shape=f), dtype=tf.float32, name=name+'_gamma')
+        beta = tf.Variable(np.zeros(shape=f), dtype=tf.float32, name=name+'_beta')
 
     mean = tf.reduce_mean(x, axis=[0,1,2])
     _, var = tf.nn.moments(x - mean, axes=[0,1,2])
@@ -152,10 +152,14 @@ block12 = mobile_block(block11, 512, 512, 1, 'block12', wd)   # 14  14
 block13 = mobile_block(block12, 512, 512, 2, 'block13', None) #      7
 block14 = mobile_block(block13, 512, 512, 1, 'block14', None) #      7
 
+###############################################################
+
 '''
 block15 = mobile_block(block14, 512, 10, 1, 'block15', None) #     7
 out = block15
 '''
+
+###############################################################
 
 mat1   = tf.Variable(init_matrix(size=(7*7*512, 4096), init='glorot_normal'), dtype=tf.float32, name='fc1')
 bias1  = tf.Variable(np.zeros(shape=4096), dtype=tf.float32, name='fc1_bias')
@@ -171,6 +175,8 @@ fc2    = tf.matmul(relu1, mat2) + bias2
 relu2  = tf.nn.relu(fc2)
 
 out    = tf.reshape(relu2, [1, 7, 7, 10])
+
+###############################################################
 
 '''
 mat1   = tf.Variable(init_matrix(size=(7*7*512, 512), init='glorot_normal'), dtype=tf.float32, name='fc1')
@@ -197,8 +203,13 @@ out    = tf.reshape(relu3, [1, 7, 7, 10])
 ###############################################################
 
 loss = yolo_loss(out, coords_ph, obj_ph, no_obj_ph)
-train = tf.train.AdamOptimizer(learning_rate=0.001, epsilon=1.).minimize(loss)
-params = tf.trainable_variables()
+train = tf.train.AdamOptimizer(learning_rate=args.lr, epsilon=args.eps).minimize(loss)
+
+params = tf.trainable_variables() # tf.global_variables() # global vars includes adam vars which we dont want
+
+weights = {}
+for p in params:
+    weights[p.name] = p
 
 ###############################################################
 
@@ -214,10 +225,14 @@ for p in params:
 assert (False)
 '''
 
+[w] = sess.run([weights], feed_dict={})
+np.save('yolo_weights', w)
+# print (w.keys())
+
 ###############################################################
 
 counter = 0
-losses = deque(maxlen=100)
+losses = deque(maxlen=10000)
 
 while True:
     if not loader.empty():
@@ -225,7 +240,7 @@ while True:
 
         [p, l, _] = sess.run([out, loss, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
 
-        print (l, np.max(p), np.min(p), np.std(p))
+        # print (l, np.max(p), np.min(p), np.std(p))
 
         if (np.any(coords < 0.) or np.any(coords > 1.1)):
             print (coords)
@@ -233,8 +248,13 @@ while True:
 
         losses.append(l)
         counter = counter + 1
-        if (counter % 100 == 0):
+
+        if (counter % 10000 == 0):
             print (np.average(losses))
+
+        if (counter % 10000 == 0):
+            [w] = sess.run([weights], feed_dict={})
+            np.save('yolo_weights', w)
 
 ###############################################################
 
