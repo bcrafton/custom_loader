@@ -13,6 +13,7 @@ parser.add_argument('--lr', type=float, default=1e-3)
 parser.add_argument('--eps', type=float, default=1.)
 parser.add_argument('--gpu', type=int, default=0)
 parser.add_argument('--load', type=str, default='MobileNet224_weights.npy')
+parser.add_argument('--name', type=str, default='yolo_coco')
 args = parser.parse_args()
 
 if args.gpu >= 0:
@@ -38,6 +39,14 @@ from yolo_loss import yolo_loss
 from draw_boxes import draw_boxes
 
 from collections import deque
+
+##############################################
+
+def write(text):
+    print (text)
+    f = open(args.name + '.results', "a")
+    f.write(text + "\n")
+    f.close()
 
 ##############################################
 
@@ -243,16 +252,16 @@ while True:
             print (coords)
             assert(not (np.any(coords < 0.) or np.any(coords > 1.1)))
 
-        [l, _] = sess.run([loss, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
+        [p, l, _] = sess.run([out, loss, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
 
         losses.append(l)
         counter = counter + 1
 
-        if (counter % 100 == 0):
+        if (counter % 1000 == 0):
             draw_boxes('%d.jpg' % (counter), image, p)
+            write("%d: %f" % (counter, np.average(losses)))
 
         if (counter % 10000 == 0):
-            print (np.average(losses))
             [w] = sess.run([weights], feed_dict={})
             np.save('yolo_weights', w)
 
