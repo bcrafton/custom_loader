@@ -239,13 +239,11 @@ while True:
     if not loader.empty():
         image, (coords, obj, no_obj) = loader.pop()
 
-        [p, l, _] = sess.run([out, loss, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
-
-        # print (l, np.max(p), np.min(p), np.std(p))
-
         if (np.any(coords < 0.) or np.any(coords > 1.1)):
             print (coords)
             assert(not (np.any(coords < 0.) or np.any(coords > 1.1)))
+
+        [l, _] = sess.run([loss, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
 
         losses.append(l)
         counter = counter + 1
@@ -255,7 +253,6 @@ while True:
 
         if (counter % 10000 == 0):
             print (np.average(losses))
-
             [w] = sess.run([weights], feed_dict={})
             np.save('yolo_weights', w)
 

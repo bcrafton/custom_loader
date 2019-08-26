@@ -94,8 +94,11 @@ def preprocess(filename, table):
         xc = int(x) // 64
         yc = int(y) // 64
 
-        x = x / 448.
-        y = y / 448.
+        # should put more asserts in here...
+        # make sure we are between 0 and 64 before / 64.
+
+        x = (x - xc * 64.) / 64. # might want to clip this to zero
+        y = (y - yc * 64.) / 64. # might want to clip this to zero
         w = w / 448.
         h = h / 448.
 
