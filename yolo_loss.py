@@ -59,9 +59,9 @@ def yolo_loss(pred, label, obj, no_obj):
 
     # https://towardsdatascience.com/breaking-down-mean-average-precision-map-ae462f623a52
     # precision = TP / (TP + FP)
-    correct = tf.cast(tf.greater(obj * tf.reduce_max(iou, axis=3), 0.5 * tf.ones_like(obj)), tf.float32)
+    correct = tf.count_nonzero(tf.greater(obj * tf.reduce_max(iou, axis=3), 0.5 * tf.ones_like(obj)))
     total = tf.count_nonzero(obj)
-    mAP = correct / total
+    mAP = tf.cast(correct, tf.float32) / tf.cast(total, tf.float32)
 
     ######################################
 

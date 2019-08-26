@@ -220,8 +220,8 @@ while True:
         mAPs.append(m)
         counter = counter + 1
 
-        if (counter % 1000 == 0):
-            draw_boxes('%d.jpg' % (counter), image, p)
+        if (counter % 10 == 0):
+            # draw_boxes('%d.jpg' % (counter), image, p)
             write("%d: %f %f" % (counter, np.average(losses), np.average(mAPs)))
 
         if (counter % 10000 == 0):
