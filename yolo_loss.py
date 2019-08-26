@@ -57,6 +57,14 @@ def yolo_loss(pred, label, obj, no_obj):
 
     ######################################
 
+    # https://towardsdatascience.com/breaking-down-mean-average-precision-map-ae462f623a52
+    # precision = TP / (TP + FP)
+    correct = tf.cast(tf.greater(obj * tf.reduce_max(iou, axis=3), 0.5 * tf.ones_like(obj)), tf.float32)
+    total = tf.count_nonzero(obj)
+    mAP = correct / total
+
+    ######################################
+
     loss_xy1 = tf.reduce_sum(tf.square(pred_xy1 - label_xy), 3)
     loss_xy2 = tf.reduce_sum(tf.square(pred_xy2 - label_xy), 3)
     xy_loss = 5. * obj * tf.where(resp_box, loss_xy1, loss_xy2)
@@ -84,8 +92,7 @@ def yolo_loss(pred, label, obj, no_obj):
     total_loss = xy_loss + wh_loss + obj_loss + no_obj_loss # [?, 16, 9]
     loss = tf.reduce_mean(tf.reduce_sum(total_loss, axis=[1, 2]))
 
-    return loss
-
+    return loss, mAP
 
 
 

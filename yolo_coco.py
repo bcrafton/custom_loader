@@ -164,13 +164,6 @@ block14 = mobile_block(block13, 512, 512, 1, 'block14', None) #      7
 
 ###############################################################
 
-'''
-block15 = mobile_block(block14, 512, 10, 1, 'block15', None) #     7
-out = block15
-'''
-
-###############################################################
-
 mat1   = tf.Variable(init_matrix(size=(7*7*512, 4096), init='glorot_normal'), dtype=tf.float32, name='fc1')
 bias1  = tf.Variable(np.zeros(shape=4096), dtype=tf.float32, name='fc1_bias')
 mat2   = tf.Variable(init_matrix(size=(4096, 7*7*10), init='glorot_normal'), dtype=tf.float32, name='fc2')
@@ -188,31 +181,7 @@ out    = tf.reshape(sig2, [1, 7, 7, 10])
 
 ###############################################################
 
-'''
-mat1   = tf.Variable(init_matrix(size=(7*7*512, 512), init='glorot_normal'), dtype=tf.float32, name='fc1')
-bias1  = tf.Variable(np.zeros(shape=512), dtype=tf.float32, name='fc1_bias')
-mat2   = tf.Variable(init_matrix(size=(512, 4096), init='glorot_normal'), dtype=tf.float32, name='fc2')
-bias2  = tf.Variable(np.zeros(shape=4096), dtype=tf.float32, name='fc2_bias')
-mat3   = tf.Variable(init_matrix(size=(4096, 7*7*10), init='glorot_normal'), dtype=tf.float32, name='fc3')
-bias3  = tf.Variable(np.zeros(shape=7*7*10), dtype=tf.float32, name='fc3_bias')
-
-flat   = tf.reshape(block14, [1, 7*7*512])
-
-fc1    = tf.matmul(flat, mat1) + bias1
-relu1  = tf.nn.relu(fc1)
-
-fc2    = tf.matmul(relu1, mat2) + bias2
-relu2  = tf.nn.relu(fc2)
-
-fc3    = tf.matmul(relu2, mat3) + bias3
-relu3  = tf.nn.relu(fc3)
-
-out    = tf.reshape(relu3, [1, 7, 7, 10])
-'''
-
-###############################################################
-
-loss = yolo_loss(out, coords_ph, obj_ph, no_obj_ph)
+loss, mAP = yolo_loss(out, coords_ph, obj_ph, no_obj_ph)
 train = tf.train.AdamOptimizer(learning_rate=args.lr, epsilon=args.eps).minimize(loss)
 
 params = tf.trainable_variables() # tf.global_variables() # global vars includes adam vars which we dont want
@@ -228,21 +197,14 @@ config.gpu_options.allow_growth=True
 sess = tf.Session(config=config)
 sess.run(tf.global_variables_initializer())
 
-'''
-[params] = sess.run([params], feed_dict={})
-for p in params:
-    print (np.shape(p))
-assert (False)
-'''
-
 [w] = sess.run([weights], feed_dict={})
 np.save('yolo_weights', w)
-# print (w.keys())
 
 ###############################################################
 
 counter = 0
 losses = deque(maxlen=10000)
+mAPs = deque(maxlen=10000)
 
 while True:
     if not loader.empty():
@@ -252,14 +214,15 @@ while True:
             print (coords)
             assert(not (np.any(coords < 0.) or np.any(coords > 1.1)))
 
-        [p, l, _] = sess.run([out, loss, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
+        [p, l, m, _] = sess.run([out, loss, mAP, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
 
         losses.append(l)
+        mAPs.append(m)
         counter = counter + 1
 
         if (counter % 1000 == 0):
             draw_boxes('%d.jpg' % (counter), image, p)
-            write("%d: %f" % (counter, np.average(losses)))
+            write("%d: %f %f" % (counter, np.average(losses), np.average(mAPs)))
 
         if (counter % 10000 == 0):
             [w] = sess.run([weights], feed_dict={})
