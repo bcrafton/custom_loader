@@ -52,7 +52,7 @@ def write(text):
 loader = LoadCOCO()
 
 load1 = 'MobileNet224_weights.npy'
-load2 = None # 'yolo_weights.npy'
+load2 = 'yolo_weights.npy'
 
 if load1:
     weights1 = np.load(load1, allow_pickle=True).item()
@@ -176,10 +176,10 @@ block14 = mobile_block(block13, 512, 512, 1, 'block14', weights2) #      7
 ###############################################################
 
 if load2:
-    mat1   = tf.Variable(weights2['fc1'], dtype=tf.float32, name='fc1')
-    bias1  = tf.Variable(weights2['fc1_bias'], dtype=tf.float32, name='fc1_bias')
-    mat2   = tf.Variable(weights2['fc2'], dtype=tf.float32, name='fc2')
-    bias2  = tf.Variable(weights2['fc2_bias'], dtype=tf.float32, name='fc2_bias')
+    mat1   = tf.Variable(weights2['fc1:0'], dtype=tf.float32, name='fc1')
+    bias1  = tf.Variable(weights2['fc1_bias:0'], dtype=tf.float32, name='fc1_bias')
+    mat2   = tf.Variable(weights2['fc2:0'], dtype=tf.float32, name='fc2')
+    bias2  = tf.Variable(weights2['fc2_bias:0'], dtype=tf.float32, name='fc2_bias')
 else:
     mat1   = tf.Variable(init_matrix(size=(7*7*512, 4096), init='glorot_normal'), dtype=tf.float32, name='fc1')
     bias1  = tf.Variable(np.zeros(shape=4096), dtype=tf.float32, name='fc1_bias')
