@@ -39,7 +39,31 @@ def get_images(path):
 
 #########################################
 
-def get_labels_table(json_filename):
+# we need a class remap table because COCO has 80 classes ... but the ids are not ordered.
+# max(class_id) = 90 ... even though there are only 80 classes.
+def get_cat_table(json_filename):
+    table = {}
+
+    json_file = open(json_filename)
+    data = json.load(json_file)
+    annotations = list(data['annotations'])
+    json_file.close()
+
+    cats = {}
+    for annotation in annotations:
+        id = annotation['category_id']
+        if id not in cats.keys():
+            cats[id] = id
+
+    sorted_cats = sorted(cats.keys())
+    for ii in range(len(sorted_cats)):
+        table[sorted_cats[ii]] = ii
+
+    return table
+
+#########################################
+
+def get_det_table(json_filename):
     table = {}
 
     json_file = open(json_filename)
@@ -50,18 +74,21 @@ def get_labels_table(json_filename):
     for annotation in annotations:
         image_id = annotation['image_id']
         bbox = annotation['bbox']
+        cat_id = annotation['category_id']
         image_filename = path + 'train_images/COCO_train2014_%012d.jpg' % (int(image_id))
 
+        new_det = (bbox, cat_id)
+
         if image_filename in table.keys():
-            table[image_filename].append(bbox)
+            table[image_filename].append(new_det)
         else:
-            table[image_filename] = [bbox]
+            table[image_filename] = [new_det]
 
     return table
 
 #########################################
 
-def preprocess(filename, table):
+def preprocess(filename, det_table, cat_table):
     # image
     image = cv2.imread(filename)
     shape = np.shape(image)
@@ -71,16 +98,16 @@ def preprocess(filename, table):
     scale_w = 448 / w
     scale_h = 448 / h
 
-    # labels
-    labels = table[filename]
-    nlabels = len(labels)
-    coords  = np.zeros(shape=[nlabels, 7, 7, 5])
-    obj     = np.zeros(shape=[nlabels, 7, 7])
-    no_obj  = np.ones(shape=[nlabels, 7, 7])
+    # dets
+    dets = det_table[filename]
+    ndets = len(dets)
+    coords  = np.zeros(shape=[ndets, 7, 7, 6])
+    obj     = np.zeros(shape=[ndets, 7, 7])
+    no_obj  = np.ones(shape=[ndets, 7, 7])
 
-    for ii in range(nlabels):
-        label = labels[ii]
-        [y, x, h, w] = label
+    for ii in range(ndets):
+        det = dets[ii]
+        [y, x, h, w], cat_id = det
 
         x = x * scale_w
         y = y * scale_h
@@ -102,7 +129,9 @@ def preprocess(filename, table):
         w = w / 448.
         h = h / 448.
 
-        coords[ii, xc, yc, :] = np.array([x, y, w, h, 1.])
+        c = cat_table[cat_id]
+
+        coords[ii, xc, yc, :] = np.array([x, y, w, h, 1., c])
         obj[ii, xc, yc] = 1.
         no_obj[ii, xc, yc] = 0.
 
@@ -110,7 +139,7 @@ def preprocess(filename, table):
 
 #########################################
 
-def fill_queue(images, table, q):
+def fill_queue(images, det_table, cat_table, q):
     ii = 0
     epoch = 0
     last = len(images) - 1
@@ -118,7 +147,7 @@ def fill_queue(images, table, q):
     while(True):
         if not q.full():
             filename = images[ii]
-            # ii = (ii + 1) if (ii < last) else 0
+
             if ii < last:
                 ii = ii + 1
             else:
@@ -126,31 +155,25 @@ def fill_queue(images, table, q):
                 epoch = epoch + 1
                 print (epoch) 
 
-            # print (filename, ii, q.qsize())
-
             if filename in table.keys():
-                image, label = preprocess(filename, table)
+                image, det = preprocess(filename, det_table, cat_table)
             else:
-                # print ('no label: %s' % (filename))
                 continue
 
-            q.put((image, label))
+            q.put((image, det))
 
 #########################################
 
 class LoadCOCO:
 
     def __init__(self):
+        self.cat_table = get_cat_table(path + 'train_labels/instances_train2014.json')
+
         self.train_images = sorted(get_images(path + 'train_images'))
-        # self.test_images = sorted(get_images(path + 'test'))
-
-        self.train_labels_table = get_labels_table(path + 'train_labels/instances_train2014.json')
-        # self.test_labels_table = get_labels_table(test_folders)
-
-        # print (self.train_labels_table.keys())
+        self.train_det_table = get_det_table(path + 'train_labels/instances_train2014.json', self.cat_table)
 
         self.q = queue.Queue(maxsize=128)
-        thread = threading.Thread(target=fill_queue, args=(self.train_images, self.train_labels_table, self.q))
+        thread = threading.Thread(target=fill_queue, args=(self.train_images, self.train_det_table, self.cat_table, self.q))
         thread.start()
 
     def pop(self):

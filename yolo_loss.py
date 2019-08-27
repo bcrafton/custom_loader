@@ -27,31 +27,31 @@ def iou_train_unit(boxA, realBox):
 
 def yolo_loss(pred, label, obj, no_obj):
 
-    # shape(pred)   = [1, 16, 9, 10]
-    # shape(label)  = [1, 16, 9, 5]
-    # shape(obj)    = [1, 16, 9]
-    # shape(no_obj) = [1, 16, 9]
-
-    pred   = tf.reshape(pred,   [-1, 7, 7, 2, 5])
+    # pred   = tf.reshape(pred,   [-1, 7, 7, 2 * 5 + 80])
 
     ######################################
 
     label_box = label[:, :, :, 0:4]
-    pred_box1 = pred[:, :, :, 0, 0:4]
-    pred_box2 = pred[:, :, :, 1, 0:4]
+    pred_box1 = pred[:, :, :, 0:4]
+    pred_box2 = pred[:, :, :, 5:9]
 
     label_xy = label[:, :, :, 0:2]
-    pred_xy1 = pred[:, :, :, 0, 0:2]
-    pred_xy2 = pred[:, :, :, 1, 0:2]
+    pred_xy1 = pred[:, :, :, 0:2]
+    pred_xy2 = pred[:, :, :, 5:7]
 
     label_wh = tf.sqrt(label[:, :, :, 2:4])
-    pred_wh1 = tf.sqrt(pred[:, :, :, 0, 2:4])
-    pred_wh2 = tf.sqrt(pred[:, :, :, 1, 2:4])
+    pred_wh1 = tf.sqrt(pred[:, :, :, 2:4])
+    pred_wh2 = tf.sqrt(pred[:, :, :, 7:9])
 
     label_conf = label[:, :, :, 4]
-    pred_conf1 = pred[:, :, :, 0, 4]
-    pred_conf2 = pred[:, :, :, 1, 4]
+    pred_conf1 = pred[:, :, :, 4]
+    pred_conf2 = pred[:, :, :, 9]
 
+    # we should only sigmoid the coordinate/confidence outputs
+    label_cat = label[:, :, :, 5]
+    label_cat = tf.one_hot(label_cat, depth=80)
+    pred_cat = pred[:, :, :, 10:90]
+    
     iou = iou_train(pred_box1, pred_box2, label_box)
     resp_box = tf.greater(iou[:, :, :, 0], iou[:, :, :, 1])
 
@@ -92,6 +92,10 @@ def yolo_loss(pred, label, obj, no_obj):
     loss_no_obj1 = tf.square(pred_conf1 - label_conf)
     loss_no_obj2 = tf.square(pred_conf2 - label_conf)
     no_obj_loss = 0.5 * no_obj * tf.where(resp_box, loss_no_obj1, loss_no_obj2)
+
+    ######################################
+
+    cat_loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=pred_cat, labels=label_cat)
 
     ######################################
 
