@@ -52,7 +52,7 @@ def write(text):
 loader = LoadCOCO()
 
 load1 = 'MobileNet224_weights.npy'
-load2 = 'yolo_weights.npy'
+load2 = None # 'yolo_weights.npy'
 
 if load1:
     weights1 = np.load(load1, allow_pickle=True).item()
@@ -198,7 +198,7 @@ out    = tf.reshape(sig2, [1, 7, 7, 10])
 
 ###############################################################
 
-loss, mAP = yolo_loss(out, coords_ph, obj_ph, no_obj_ph)
+loss, precision, recall = yolo_loss(out, coords_ph, obj_ph, no_obj_ph)
 train = tf.train.AdamOptimizer(learning_rate=args.lr, epsilon=args.eps).minimize(loss)
 
 params = tf.trainable_variables() # tf.global_variables() # global vars includes adam vars which we dont want
@@ -221,7 +221,8 @@ np.save('yolo_weights', w)
 
 counter = 0
 losses = deque(maxlen=10000)
-mAPs = deque(maxlen=10000)
+precs = deque(maxlen=10000)
+recs = deque(maxlen=10000)
 
 while True:
     if not loader.empty():
@@ -231,15 +232,16 @@ while True:
             print (coords)
             assert(not (np.any(coords < 0.) or np.any(coords > 1.1)))
 
-        [p, l, m, _] = sess.run([out, loss, mAP, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
+        [p, l, prec, rec, _] = sess.run([out, loss, precision, recall, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
 
         losses.append(l)
-        mAPs.append(m)
+        precs.append(prec)
+        recs.append(rec)
         counter = counter + 1
 
         if (counter % 1000 == 0):
             # draw_boxes('%d.jpg' % (counter), image, p)
-            write("%d: %f %f" % (counter, np.average(losses), np.average(mAPs)))
+            write("%d: %f %f %f" % (counter, np.average(losses), np.average(precs), np.average(recs)))
 
         if (counter % 10000 == 0):
             [w] = sess.run([weights], feed_dict={})

@@ -59,9 +59,15 @@ def yolo_loss(pred, label, obj, no_obj):
 
     # https://towardsdatascience.com/breaking-down-mean-average-precision-map-ae462f623a52
     # precision = TP / (TP + FP)
-    correct = tf.count_nonzero(tf.greater(obj * tf.reduce_max(iou, axis=3), 0.5 * tf.ones_like(obj)))
-    total = tf.count_nonzero(obj)
-    mAP = tf.cast(correct, tf.float32) / tf.cast(total, tf.float32)
+    TP = tf.count_nonzero(tf.greater(obj * tf.reduce_max(iou, axis=3), 0.5 * tf.ones_like(obj)))
+    TP_FN = tf.count_nonzero(obj)
+    # need threshold value -> sigmoid activation
+    # sigmoid(0) = 0.5
+    threshold = tf.ones_like(pred_conf1) * tf.math.sigmoid(0.)
+    TP_FP = tf.count_nonzero(tf.greater(pred_conf1, threshold)) + tf.count_nonzero(tf.greater(pred_conf2, threshold))
+
+    precision = tf.cast(TP, tf.float32) / tf.cast(TP_FP, tf.float32)
+    recall = tf.cast(TP, tf.float32) / tf.cast(TP_FN, tf.float32)
 
     ######################################
 
@@ -92,7 +98,7 @@ def yolo_loss(pred, label, obj, no_obj):
     total_loss = xy_loss + wh_loss + obj_loss + no_obj_loss # [?, 16, 9]
     loss = tf.reduce_mean(tf.reduce_sum(total_loss, axis=[1, 2]))
 
-    return loss, mAP
+    return loss, precision, recall
 
 
 
