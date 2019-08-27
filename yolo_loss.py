@@ -64,6 +64,10 @@ def yolo_loss(pred, label, obj, no_obj, cat):
 
     ######################################
 
+    # TODO
+    # TP = (conf > thresh) and (pred_cat = label_cat) and (iou > 0.5)
+    # whatever thresh we use for FP we must also use to TP.
+
     # https://towardsdatascience.com/breaking-down-mean-average-precision-map-ae462f623a52
     # precision = TP / (TP + FP)
     TP = tf.count_nonzero(tf.greater(obj * tf.reduce_max(iou, axis=3), 0.5 * tf.ones_like(obj)))
