@@ -24,10 +24,18 @@ def iou_train_unit(boxA, realBox):
     iou = tf.divide(intersection, union)
     return iou
 
+'''
+def mean_sum_squared(loss):
+    return tf.mean(tf.sum(tf.suared()))
+'''
 
-def yolo_loss(pred, label, obj, no_obj):
+def yolo_loss(pred, label, obj, no_obj, cat):
 
-    # pred   = tf.reshape(pred,   [-1, 7, 7, 2 * 5 + 80])
+    # pred   = [-1, 7, 7, 2 * 5 + 80]
+    # label  = [-1, 7, 7, 5]
+    # obj    = [-1, 7, 7]
+    # no_obj = [-1, 7, 7]
+    # cat    = [-1, 7, 7]
 
     ######################################
 
@@ -48,8 +56,7 @@ def yolo_loss(pred, label, obj, no_obj):
     pred_conf2 = pred[:, :, :, 9]
 
     # we should only sigmoid the coordinate/confidence outputs
-    label_cat = label[:, :, :, 5]
-    label_cat = tf.one_hot(label_cat, depth=80)
+    label_cat = tf.one_hot(cat, depth=80)
     pred_cat = pred[:, :, :, 10:90]
     
     iou = iou_train(pred_box1, pred_box2, label_box)
@@ -95,12 +102,14 @@ def yolo_loss(pred, label, obj, no_obj):
 
     ######################################
 
-    # need to zero out grid cells without object.
-    cat_loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=pred_cat, labels=label_cat)
+    pred_cat = tf.reshape(obj, [-1,7,7,1]) * pred_cat
+    cat_loss = tf.reduce_mean(tf.square(pred_cat - label_cat), axis=3)
 
     ######################################
 
     total_loss = xy_loss + wh_loss + obj_loss + no_obj_loss + cat_loss
+    # total_loss = tf.Print(total_loss, [tf.shape(xy_loss), tf.shape(wh_loss), tf.shape(obj_loss), tf.shape(no_obj_loss), tf.shape(cat_loss)], message='', summarize=1000)
+
     loss = tf.reduce_mean(tf.reduce_sum(total_loss, axis=[1, 2]))
 
     return loss, precision, recall

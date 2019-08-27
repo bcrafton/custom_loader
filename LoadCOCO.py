@@ -101,13 +101,16 @@ def preprocess(filename, det_table, cat_table):
     # dets
     dets = det_table[filename]
     ndets = len(dets)
-    coords  = np.zeros(shape=[ndets, 7, 7, 6])
+    coords  = np.zeros(shape=[ndets, 7, 7, 5])
     obj     = np.zeros(shape=[ndets, 7, 7])
     no_obj  = np.ones(shape=[ndets, 7, 7])
+    cats    = np.zeros(shape=[ndets, 7, 7])
 
     for ii in range(ndets):
         det = dets[ii]
         [y, x, h, w], cat_id = det
+
+        cat = cat_table[cat_id]
 
         x = x * scale_w
         y = y * scale_h
@@ -129,13 +132,12 @@ def preprocess(filename, det_table, cat_table):
         w = w / 448.
         h = h / 448.
 
-        c = cat_table[cat_id]
-
-        coords[ii, xc, yc, :] = np.array([x, y, w, h, 1., c])
+        coords[ii, xc, yc, :] = np.array([x, y, w, h, 1.])
         obj[ii, xc, yc] = 1.
         no_obj[ii, xc, yc] = 0.
+        cats[ii, xc, yc] = cat
 
-    return image, (coords, obj, no_obj)
+    return image, (coords, obj, no_obj, cats)
 
 #########################################
 
@@ -155,7 +157,7 @@ def fill_queue(images, det_table, cat_table, q):
                 epoch = epoch + 1
                 print (epoch) 
 
-            if filename in table.keys():
+            if filename in det_table.keys():
                 image, det = preprocess(filename, det_table, cat_table)
             else:
                 continue
@@ -170,7 +172,7 @@ class LoadCOCO:
         self.cat_table = get_cat_table(path + 'train_labels/instances_train2014.json')
 
         self.train_images = sorted(get_images(path + 'train_images'))
-        self.train_det_table = get_det_table(path + 'train_labels/instances_train2014.json', self.cat_table)
+        self.train_det_table = get_det_table(path + 'train_labels/instances_train2014.json')
 
         self.q = queue.Queue(maxsize=128)
         thread = threading.Thread(target=fill_queue, args=(self.train_images, self.train_det_table, self.cat_table, self.q))

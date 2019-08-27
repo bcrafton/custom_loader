@@ -95,17 +95,6 @@ def batch_norm(x, f, name, load):
     bn = tf.nn.batch_normalization(x=x, mean=mean, variance=var, offset=beta, scale=gamma, variance_epsilon=1e-3)
     return bn
 
-'''
-def batch_norm_dense(x, n, name):
-    gamma = tf.Variable(np.ones(shape=n), dtype=tf.float32)
-    beta = tf.Variable(np.zeros(shape=n), dtype=tf.float32)
-
-    mean = tf.reduce_mean(x, axis=[0])
-    _, var = tf.nn.moments(x - mean, axes=[0])
-    bn = tf.nn.batch_normalization(x=x, mean=mean, variance=var, offset=beta, scale=gamma, variance_epsilon=1e-3)
-    return bn
-'''
-
 def block(x, f1, f2, p, name, load):
     if load:
         filters = tf.Variable(load[name+'_conv'+':0'], dtype=tf.float32, name=name+'_conv', trainable=False)
@@ -136,20 +125,13 @@ def mobile_block(x, f1, f2, p, name, load):
 
     return relu2
 
-'''
-def dense(x, n_in, n_out, name):
-    mat   = tf.Variable(init_matrix(size=(n_in, n_out), init='glorot_normal'), dtype=tf.float32, name=name)
-    bias  = tf.Variable(np.zeros(shape=n_out), dtype=tf.float32, name=name+'_bias')
-    fc    = tf.matmul(x, mat) + bias
-    return out 
-'''
-
 ###############################################################
 
 image_ph  = tf.placeholder(tf.float32, [1, 448, 448, 3])
-coords_ph = tf.placeholder(tf.float32, [None, 7, 7, 6])
+coords_ph = tf.placeholder(tf.float32, [None, 7, 7, 5])
 obj_ph    = tf.placeholder(tf.float32, [None, 7, 7])
 no_obj_ph = tf.placeholder(tf.float32, [None, 7, 7])
+cat_ph    = tf.placeholder(tf.int32, [None, 7, 7])
 
 bn     = batch_norm(image_ph, 3, 'bn0', None)                     # 224 448
 
@@ -192,17 +174,15 @@ fc1    = tf.matmul(flat, mat1) + bias1
 relu1  = tf.nn.relu(fc1)
 
 fc2    = tf.matmul(relu1, mat2) + bias2
-sig2   = tf.math.sigmoid(fc2[:, :, :, 0:10])
-lin2   = fc2[:, :, :, 10:90]
-out2   = tf.concat((sig2, lin2), axis=3)
-
-out    = tf.reshape(out2, [1, 7, 7, 90])
+sig2   = tf.math.sigmoid(fc2)
+out    = tf.reshape(sig2, [1, 7, 7, 90])
 
 ###############################################################
 
-loss, precision, recall = yolo_loss(out, coords_ph, obj_ph, no_obj_ph)
+loss, precision, recall = yolo_loss(out, coords_ph, obj_ph, no_obj_ph, cat_ph)
 train = tf.train.AdamOptimizer(learning_rate=args.lr, epsilon=args.eps).minimize(loss)
 
+# this still causing issues when we want to save variables with trainable=False
 params = tf.trainable_variables() # tf.global_variables() # global vars includes adam vars which we dont want
 
 weights = {}
@@ -228,13 +208,13 @@ recs = deque(maxlen=10000)
 
 while True:
     if not loader.empty():
-        image, (coords, obj, no_obj) = loader.pop()
+        image, (coords, obj, no_obj, cat) = loader.pop()
 
         if (np.any(coords < 0.) or np.any(coords > 1.1)):
             print (coords)
             assert(not (np.any(coords < 0.) or np.any(coords > 1.1)))
 
-        [p, l, prec, rec, _] = sess.run([out, loss, precision, recall, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj})
+        [p, l, prec, rec, _] = sess.run([out, loss, precision, recall, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat})
 
         losses.append(l)
         precs.append(prec)
