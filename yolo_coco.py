@@ -192,9 +192,11 @@ fc1    = tf.matmul(flat, mat1) + bias1
 relu1  = tf.nn.relu(fc1)
 
 fc2    = tf.matmul(relu1, mat2) + bias2
-sig2   = tf.math.sigmoid(fc2)
+sig2   = tf.math.sigmoid(fc2[:, :, :, 0:10])
+lin2   = fc2[:, :, :, 10:90]
+out2   = tf.concat((sig2, lin2), axis=3)
 
-out    = tf.reshape(sig2, [1, 7, 7, 90])
+out    = tf.reshape(out2, [1, 7, 7, 90])
 
 ###############################################################
 
