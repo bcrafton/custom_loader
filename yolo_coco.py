@@ -147,7 +147,7 @@ def dense(x, n_in, n_out, name):
 ###############################################################
 
 image_ph  = tf.placeholder(tf.float32, [1, 448, 448, 3])
-coords_ph = tf.placeholder(tf.float32, [None, 7, 7, 5])
+coords_ph = tf.placeholder(tf.float32, [None, 7, 7, 6])
 obj_ph    = tf.placeholder(tf.float32, [None, 7, 7])
 no_obj_ph = tf.placeholder(tf.float32, [None, 7, 7])
 
@@ -183,8 +183,8 @@ if load2:
 else:
     mat1   = tf.Variable(init_matrix(size=(7*7*512, 4096), init='glorot_normal'), dtype=tf.float32, name='fc1')
     bias1  = tf.Variable(np.zeros(shape=4096), dtype=tf.float32, name='fc1_bias')
-    mat2   = tf.Variable(init_matrix(size=(4096, 7*7*10), init='glorot_normal'), dtype=tf.float32, name='fc2')
-    bias2  = tf.Variable(np.zeros(shape=7*7*10), dtype=tf.float32, name='fc2_bias')
+    mat2   = tf.Variable(init_matrix(size=(4096, 7*7*90), init='glorot_normal'), dtype=tf.float32, name='fc2')
+    bias2  = tf.Variable(np.zeros(shape=7*7*90), dtype=tf.float32, name='fc2_bias')
 
 flat   = tf.reshape(block14, [1, 7*7*512])
 
@@ -194,7 +194,7 @@ relu1  = tf.nn.relu(fc1)
 fc2    = tf.matmul(relu1, mat2) + bias2
 sig2   = tf.math.sigmoid(fc2)
 
-out    = tf.reshape(sig2, [1, 7, 7, 10])
+out    = tf.reshape(sig2, [1, 7, 7, 90])
 
 ###############################################################
 
@@ -240,6 +240,7 @@ while True:
         counter = counter + 1
 
         if (counter % 1000 == 0):
+            # we changed our prediction encoding, so this will likely break.
             # draw_boxes('%d.jpg' % (counter), image, p)
             write("%d: %f %f %f" % (counter, np.average(losses), np.average(precs), np.average(recs)))
 

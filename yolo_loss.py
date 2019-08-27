@@ -95,11 +95,12 @@ def yolo_loss(pred, label, obj, no_obj):
 
     ######################################
 
+    # need to zero out grid cells without object.
     cat_loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=pred_cat, labels=label_cat)
 
     ######################################
 
-    total_loss = xy_loss + wh_loss + obj_loss + no_obj_loss # [?, 16, 9]
+    total_loss = xy_loss + wh_loss + obj_loss + no_obj_loss + cat_loss
     loss = tf.reduce_mean(tf.reduce_sum(total_loss, axis=[1, 2]))
 
     return loss, precision, recall
