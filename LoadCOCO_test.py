@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 loader = LoadCOCO()
-
+'''
 counter = 0
 while True:
     if not loader.empty():
@@ -34,3 +34,4 @@ while True:
 
         print (counter)
         counter = counter + 1
+'''

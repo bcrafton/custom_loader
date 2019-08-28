@@ -88,23 +88,24 @@ def get_det_table(json_filename):
 
 #########################################
 
-def preprocess(filename, det_table, cat_table):
+def preprocess(det_size, filename, det_table, cat_table):
     # image
     image = cv2.imread(filename)
     shape = np.shape(image)
     (w, h, _) = shape
     image = cv2.resize(image, (448, 448))
-    image = np.reshape(image, [1, 448, 448, 3])
+    # image = np.reshape(image, [1, 448, 448, 3])
     scale_w = 448 / w
     scale_h = 448 / h
 
     # dets
     dets = det_table[filename]
-    ndets = len(dets)
-    coords  = np.zeros(shape=[ndets, 7, 7, 5])
-    obj     = np.zeros(shape=[ndets, 7, 7])
-    no_obj  = np.ones(shape=[ndets, 7, 7])
-    cats    = np.zeros(shape=[ndets, 7, 7])
+    coords  = np.zeros(shape=[det_size, 7, 7, 5])
+    obj     = np.zeros(shape=[det_size, 7, 7])
+    no_obj  = np.ones(shape=[det_size, 7, 7])
+    cats    = np.zeros(shape=[det_size, 7, 7])
+
+    ndets = min(len(dets), det_size)
 
     for ii in range(ndets):
         det = dets[ii]
@@ -141,26 +142,42 @@ def preprocess(filename, det_table, cat_table):
 
 #########################################
 
-def fill_queue(images, det_table, cat_table, q):
+def fill_queue(batch_size, det_size, images, det_table, cat_table, q):
     ii = 0
-    epoch = 0
     last = len(images) - 1
 
     while(True):
         if not q.full():
-            filename = images[ii]
+            image_batch  = []
+            coords_batch = []
+            obj_batch    = []
+            no_obj_batch = []
+            cats_batch   = []
 
-            if ii < last:
-                ii = ii + 1
-            else:
-                ii = 0
-                epoch = epoch + 1
-                print (epoch) 
+            while (len(image_batch) < batch_size):
+                filename = images[ii]
 
-            if filename in det_table.keys():
-                image, det = preprocess(filename, det_table, cat_table)
-            else:
-                continue
+                ii = (ii + 1) if ((ii + 1) < last) else 0
+
+                if filename in det_table.keys():
+                    image, (coords, obj, no_obj, cats) = preprocess(det_size, filename, det_table, cat_table)
+                else:
+                    continue
+
+                image_batch.append(image)
+                coords_batch.append(coords)
+                obj_batch.append(obj)
+                no_obj_batch.append(no_obj)
+                cats_batch.append(cats)
+
+            image_batch = np.stack(image_batch)
+            coords_batch = np.stack(coords_batch)
+            obj_batch = np.stack(obj_batch)
+            no_obj_batch = np.stack(no_obj_batch)
+            cats_batch = np.stack(cats_batch)
+
+            image = image_batch
+            det = (coords_batch, obj_batch, no_obj_batch, cats_batch)
 
             q.put((image, det))
 
@@ -168,14 +185,25 @@ def fill_queue(images, det_table, cat_table, q):
 
 class LoadCOCO:
 
-    def __init__(self):
-        self.cat_table = get_cat_table(path + 'train_labels/instances_train2014.json')
+    def __init__(self, batch_size, det_size):
+        self.batch_size = batch_size
+        self.det_size = det_size
 
+        self.cat_table = get_cat_table(path + 'train_labels/instances_train2014.json')
         self.train_images = sorted(get_images(path + 'train_images'))
         self.train_det_table = get_det_table(path + 'train_labels/instances_train2014.json')
 
+        '''
+        maxval = 0
+        for key in self.train_det_table.keys():
+            val = self.train_det_table[key]
+            if len(val) > maxval:
+                maxval = len(val)
+                maxkey = key
+        '''
+
         self.q = queue.Queue(maxsize=128)
-        thread = threading.Thread(target=fill_queue, args=(self.train_images, self.train_det_table, self.cat_table, self.q))
+        thread = threading.Thread(target=fill_queue, args=(self.batch_size, self.det_size, self.train_images, self.train_det_table, self.cat_table, self.q))
         thread.start()
 
     def pop(self):

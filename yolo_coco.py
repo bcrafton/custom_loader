@@ -8,7 +8,7 @@ import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--epochs', type=int, default=10)
-parser.add_argument('--batch_size', type=int, default=32)
+# parser.add_argument('--batch_size', type=int, default=32)
 parser.add_argument('--lr', type=float, default=1e-3)
 parser.add_argument('--eps', type=float, default=1.)
 parser.add_argument('--gpu', type=int, default=0)
@@ -49,7 +49,7 @@ def write(text):
 
 ##############################################
 
-loader = LoadCOCO()
+loader = LoadCOCO(batch_size=8, det_size=16)
 
 load1 = 'MobileNet224_weights.npy'
 load2 = None # 'yolo_weights.npy'
@@ -96,6 +96,7 @@ def batch_norm(x, f, name, load):
     return bn
 
 def block(x, f1, f2, p, name, load):
+    print (name)
     if load:
         filters = tf.Variable(load[name+'_conv'+':0'], dtype=tf.float32, name=name+'_conv', trainable=False)
     else:
@@ -127,11 +128,11 @@ def mobile_block(x, f1, f2, p, name, load):
 
 ###############################################################
 
-image_ph  = tf.placeholder(tf.float32, [1, 448, 448, 3])
-coords_ph = tf.placeholder(tf.float32, [None, 7, 7, 5])
-obj_ph    = tf.placeholder(tf.float32, [None, 7, 7])
-no_obj_ph = tf.placeholder(tf.float32, [None, 7, 7])
-cat_ph    = tf.placeholder(tf.int32, [None, 7, 7])
+image_ph  = tf.placeholder(tf.float32, [loader.batch_size, 448, 448, 3])
+coords_ph = tf.placeholder(tf.float32, [loader.batch_size, loader.det_size, 7, 7, 5])
+obj_ph    = tf.placeholder(tf.float32, [loader.batch_size, loader.det_size, 7, 7])
+no_obj_ph = tf.placeholder(tf.float32, [loader.batch_size, loader.det_size, 7, 7])
+cat_ph    = tf.placeholder(tf.int32,   [loader.batch_size, loader.det_size, 7, 7])
 
 bn     = batch_norm(image_ph, 3, 'bn0', None)                     # 224 448
 
@@ -168,14 +169,14 @@ else:
     mat2   = tf.Variable(init_matrix(size=(4096, 7*7*90), init='glorot_normal'), dtype=tf.float32, name='fc2')
     bias2  = tf.Variable(np.zeros(shape=7*7*90), dtype=tf.float32, name='fc2_bias')
 
-flat   = tf.reshape(block14, [1, 7*7*512])
+flat   = tf.reshape(block14, [loader.batch_size, 7*7*512])
 
 fc1    = tf.matmul(flat, mat1) + bias1
 relu1  = tf.nn.relu(fc1)
 
 fc2    = tf.matmul(relu1, mat2) + bias2
 sig2   = tf.math.sigmoid(fc2)
-out    = tf.reshape(sig2, [1, 7, 7, 90])
+out    = tf.reshape(sig2, [loader.batch_size, 7, 7, 90])
 
 ###############################################################
 
