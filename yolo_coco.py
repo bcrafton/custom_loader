@@ -174,8 +174,9 @@ fc1    = tf.matmul(flat, mat1) + bias1
 relu1  = tf.nn.relu(fc1)
 
 fc2    = tf.matmul(relu1, mat2) + bias2
-sig2   = tf.math.sigmoid(fc2)
-out    = tf.reshape(sig2, [1, 7, 7, 90])
+# sig2   = tf.math.sigmoid(fc2)
+lin2   = fc2
+out    = tf.reshape(lin2, [1, 7, 7, 90])
 
 ###############################################################
 
@@ -220,6 +221,8 @@ while True:
         precs.append(prec)
         recs.append(rec)
         counter = counter + 1
+
+        # print(np.count_nonzero(p[:,:,:,4] > 0.7), np.prod(np.shape(p[:,:,:,4])))
 
         if (counter % 1000 == 0):
             # we changed our prediction encoding, so this will likely break.

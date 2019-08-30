@@ -48,8 +48,8 @@ def yolo_loss(pred, label, obj, no_obj, cat):
     pred_xy2 = pred[:, :, :, 5:7]
 
     label_wh = tf.sqrt(label[:, :, :, 2:4])
-    pred_wh1 = tf.sqrt(pred[:, :, :, 2:4])
-    pred_wh2 = tf.sqrt(pred[:, :, :, 7:9])
+    pred_wh1 = tf.sqrt(tf.abs(pred[:, :, :, 2:4])) * tf.sign(pred[:, :, :, 2:4])
+    pred_wh2 = tf.sqrt(tf.abs(pred[:, :, :, 7:9])) * tf.sign(pred[:, :, :, 7:9])
 
     label_conf = label[:, :, :, 4]
     pred_conf1 = pred[:, :, :, 4]
@@ -77,8 +77,8 @@ def yolo_loss(pred, label, obj, no_obj, cat):
     threshold = tf.ones_like(pred_conf1) * tf.math.sigmoid(0.)
     TP_FP = tf.count_nonzero(tf.greater(pred_conf1, threshold)) + tf.count_nonzero(tf.greater(pred_conf2, threshold))
 
-    precision = tf.cast(TP, tf.float32) / tf.cast(TP_FP, tf.float32)
-    recall = tf.cast(TP, tf.float32) / tf.cast(TP_FN, tf.float32)
+    precision = tf.cast(TP, tf.float32) / (tf.cast(TP_FP, tf.float32) + 1e-3)
+    recall = tf.cast(TP, tf.float32) / (tf.cast(TP_FN, tf.float32) + 1e-3)
 
     ######################################
 
