@@ -70,11 +70,12 @@ def yolo_loss(pred, label, obj, no_obj, cat):
 
     # https://towardsdatascience.com/breaking-down-mean-average-precision-map-ae462f623a52
     # precision = TP / (TP + FP)
-    TP = tf.count_nonzero(tf.greater(obj * tf.reduce_max(iou, axis=3), 0.5 * tf.ones_like(obj)))
+
+    threshold = tf.ones_like(pred_conf1) * 0.2
+    conf_mask = tf.cast(tf.greater(tf.where(resp_box, pred_conf1, pred_conf2), threshold), tf.float32)
+
+    TP = tf.count_nonzero(tf.greater(obj * tf.reduce_max(iou, axis=3) * conf_mask, 0.5 * tf.ones_like(obj)))
     TP_FN = tf.count_nonzero(obj)
-    # need threshold value -> sigmoid activation
-    # sigmoid(0) = 0.5
-    threshold = tf.ones_like(pred_conf1) * tf.math.sigmoid(0.)
     TP_FP = tf.count_nonzero(tf.greater(pred_conf1, threshold)) + tf.count_nonzero(tf.greater(pred_conf2, threshold))
 
     precision = tf.cast(TP, tf.float32) / (tf.cast(TP_FP, tf.float32) + 1e-3)
