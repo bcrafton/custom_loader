@@ -50,19 +50,7 @@ def write(text):
 ##############################################
 
 loader = LoadCOCO()
-
-load1 = 'MobileNet224_weights.npy'
-load2 = None # 'yolo_weights.npy'
-
-if load1:
-    weights1 = np.load(load1, allow_pickle=True).item()
-else:
-    weights1 = None
-
-if load2:
-    weights2 = np.load(load2, allow_pickle=True).item()
-else:
-    weights2 = None
+weights = np.load('yolo_weights.npy', allow_pickle=True).item()
 
 ##############################################
 
@@ -79,51 +67,24 @@ def in_top_k(x, y, k):
 
 ###############################################################
 
-def avg_pool(x, s):
-    return tf.nn.avg_pool(bn, ksize=[1,s,s,1], strides=[1,s,s,1], padding='SAME')
+def max_pool(x, s):
+    return tf.nn.max_pool(x, ksize=[1,s,s,1], strides=[1,s,s,1], padding='SAME')
 
-def batch_norm(x, f, name, load):
-    if load:
-        gamma = tf.Variable(load[name+'_gamma'+':0'], dtype=tf.float32, name=name+'_gamma', trainable=False)
-        beta = tf.Variable(load[name+'_beta'+':0'], dtype=tf.float32, name=name+'_beta', trainable=False)
+def conv(x, f, p, w, name):
+    fw, fh, fi, fo = f
+    assert(np.shape(w) == f)
+
+    if w:
+        filters = tf.Variable(w[name], dtype=tf.float32, trainable=False)
+        bias = tf.Variable(w[name + '_bias'], dtype=tf.float32, trainable=False)
     else:
-        gamma = tf.Variable(np.ones(shape=f), dtype=tf.float32, name=name+'_gamma')
-        beta = tf.Variable(np.zeros(shape=f), dtype=tf.float32, name=name+'_beta')
+        filters = tf.Variable(init_filters(size=[fw, fh, fi, fo], init='alexnet'), dtype=tf.float32)
+        filters = tf.Variable(np.zeros(shape=fo), dtype=tf.float32)
 
-    mean = tf.reduce_mean(x, axis=[0,1,2])
-    _, var = tf.nn.moments(x - mean, axes=[0,1,2])
-    bn = tf.nn.batch_normalization(x=x, mean=mean, variance=var, offset=beta, scale=gamma, variance_epsilon=1e-3)
-    return bn
+    conv = tf.nn.conv2d(x, filters, [1,p,p,1], 'SAME') + bias
+    relu = tf.nn.relu(conv)
 
-def block(x, f1, f2, p, name, load):
-    if load:
-        filters = tf.Variable(load[name+'_conv'+':0'], dtype=tf.float32, name=name+'_conv', trainable=False)
-    else:
-        filters = tf.Variable(init_filters(size=[3,3,f1,f2], init='alexnet'), dtype=tf.float32, name=name+'_conv')
-
-    conv = tf.nn.conv2d(x, filters, [1,p,p,1], 'SAME')
-    bn   = batch_norm(conv, f2, name+'_bn', load)
-    relu = tf.nn.relu(bn)
     return relu
-
-def mobile_block(x, f1, f2, p, name, load):
-    print (name)
-    if load:
-        filters1 = tf.Variable(load[name+'_conv_dw'+':0'], dtype=tf.float32, name=name+'_conv_dw', trainable=False)
-        filters2 = tf.Variable(load[name+'_conv_pw'+':0'], dtype=tf.float32, name=name+'_conv_pw', trainable=False)
-    else:
-        filters1 = tf.Variable(init_filters(size=[3,3,f1,1], init='alexnet'), dtype=tf.float32, name=name+'_conv_dw')
-        filters2 = tf.Variable(init_filters(size=[1,1,f1,f2], init='alexnet'), dtype=tf.float32, name=name+'_conv_pw')
-
-    conv1 = tf.nn.depthwise_conv2d(x, filters1, [1,p,p,1], 'SAME')
-    bn1   = batch_norm(conv1, f1, name+'_bn_dw', load)
-    relu1 = tf.nn.relu(bn1)
-
-    conv2 = tf.nn.conv2d(relu1, filters2, [1,1,1,1], 'SAME')
-    bn2   = batch_norm(conv2, f2, name+'_bn_pw', load)
-    relu2 = tf.nn.relu(bn2)
-
-    return relu2
 
 ###############################################################
 
@@ -133,61 +94,64 @@ obj_ph    = tf.placeholder(tf.float32, [None, 7, 7])
 no_obj_ph = tf.placeholder(tf.float32, [None, 7, 7])
 cat_ph    = tf.placeholder(tf.int32, [None, 7, 7])
 
-bn     = batch_norm(image_ph, 3, 'bn0', None)                     # 224 448
+###############################################################
 
-block1 = block(bn, 3, 32, 2, 'block1', weights1)                  # 224 448
+conv1 = conv(image_ph, [7,7,3,64], 2, weights, 'conv_1')          # 448
+pool1 = max_pool(conv1, 2)                                        # 224
+conv2 = conv(pool1, [3,3,64,192], 1, weights, 'conv_2')           # 112
+pool2 = max_pool(conv2, 2)                                        # 112
 
-block2 = mobile_block(block1, 32, 64, 1, 'block2', weights1)      # 112 224
-block3 = mobile_block(block2, 64, 128, 2, 'block3', weights1)     # 112 224
+conv3 = conv(pool2, [1,1,192,128], 1, weights, 'conv_3')          # 56
+conv4 = conv(conv3, [3,3,128,256], 1, weights, 'conv_4')          # 56
+conv5 = conv(conv4, [1,1,256,256], 1, weights, 'conv_5')          # 56
+conv6 = conv(conv5, [3,3,256,512], 1, weights, 'conv_6')          # 56
+pool3 = max_pool(conv6, 2)                                        # 56
 
-block4 = mobile_block(block3, 128, 128, 1, 'block4', weights1)    # 56  112
-block5 = mobile_block(block4, 128, 256, 2, 'block5', weights1)    # 56  112
+conv7 = conv(pool2,   [1,1,512,256],  1, weights, 'conv_7')       # 28
+conv8 = conv(conv7,   [3,3,256,512],  1, weights, 'conv_8')       # 28
+conv9 = conv(conv8,   [1,1,512,256],  1, weights, 'conv_9')       # 28
+conv10 = conv(conv9,  [3,3,256,512],  1, weights, 'conv_10')      # 28
+conv11 = conv(pool10, [1,1,512,256],  1, weights, 'conv_11')      # 28
+conv12 = conv(conv11, [3,3,256,512],  1, weights, 'conv_12')      # 28
+conv13 = conv(conv12, [1,1,512,256],  1, weights, 'conv_13')      # 28
+conv14 = conv(conv13, [3,3,256,512],  1, weights, 'conv_14')      # 28
+conv15 = conv(conv14, [1,1,512,512],  1, weights, 'conv_15')      # 28
+conv16 = conv(conv15, [3,3,512,1024], 1, weights, 'conv_16')      # 28
+pool4 = max_pool(conv16, 2)                                       # 28
 
-block6 = mobile_block(block5, 256, 256, 1, 'block6', weights1)    # 28  56
-block7 = mobile_block(block6, 256, 512, 2, 'block7', weights1)    # 28  56
+conv17 = conv(pool4,  [1,1,1024,512], 1, weights, 'conv_17')      # 14
+conv18 = conv(conv17, [3,3,512,1024], 1, weights, 'conv_18')      # 14
+conv19 = conv(conv18, [1,1,1024,512], 1, weights, 'conv_19')      # 14
+conv20 = conv(conv19, [3,3,512,1024], 1, weights, 'conv_20')      # 14
 
-block8 = mobile_block(block7, 512, 512, 1, 'block8', weights1)    # 14  28
-block9 = mobile_block(block8, 512, 512, 2, 'block9', weights1)    # 14  28
-block10 = mobile_block(block9, 512, 512, 1, 'block10', weights1)  # 14  14
-block11 = mobile_block(block10, 512, 512, 1, 'block11', weights1) # 14  14
-block12 = mobile_block(block11, 512, 512, 1, 'block12', weights1) # 14  14
-
-block13 = mobile_block(block12, 512, 512, 2, 'block13', weights2) #      7
-block14 = mobile_block(block13, 512, 512, 1, 'block14', weights2) #      7
+conv21 = conv(conv20, [3,3,1024,1024], 1, weights, 'conv_21')     # 14
+conv22 = conv(conv21, [3,3,1024,1024], 2, weights, 'conv_22')     # 14
+conv23 = conv(conv22, [3,3,1024,1024], 1, weights, 'conv_23')     # 7
+conv24 = conv(conv23, [3,3,1024,1024], 1, weights, 'conv_24')     # 7
 
 ###############################################################
 
-if load2:
-    mat1   = tf.Variable(weights2['fc1:0'], dtype=tf.float32, name='fc1')
-    bias1  = tf.Variable(weights2['fc1_bias:0'], dtype=tf.float32, name='fc1_bias')
-    mat2   = tf.Variable(weights2['fc2:0'], dtype=tf.float32, name='fc2')
-    bias2  = tf.Variable(weights2['fc2_bias:0'], dtype=tf.float32, name='fc2_bias')
-else:
-    mat1   = tf.Variable(init_matrix(size=(7*7*512, 4096), init='glorot_normal'), dtype=tf.float32, name='fc1')
-    bias1  = tf.Variable(np.zeros(shape=4096), dtype=tf.float32, name='fc1_bias')
-    mat2   = tf.Variable(init_matrix(size=(4096, 7*7*90), init='glorot_normal'), dtype=tf.float32, name='fc2')
-    bias2  = tf.Variable(np.zeros(shape=7*7*90), dtype=tf.float32, name='fc2_bias')
+mat1   = tf.Variable(weights['dense_1'], dtype=tf.float32)
+bias1  = tf.Variable(weights['dense_1_bias'], dtype=tf.float32)
+mat2   = tf.Variable(weights['dense_2'], dtype=tf.float32)
+bias2  = tf.Variable(weights['dense_2_bias'], dtype=tf.float32)
+mat3   = tf.Variable(weights['dense_3'], dtype=tf.float32)
+bias3  = tf.Variable(weights['dense_3_bias'], dtype=tf.float32)
 
-flat   = tf.reshape(block14, [1, 7*7*512])
+flat   = tf.reshape(conv24, [1, 7*7*1024])
 
-fc1    = tf.matmul(flat, mat1) + bias1
+fc1    = tf.matmul(flat,  mat1) + bias1
 relu1  = tf.nn.relu(fc1)
 
 fc2    = tf.matmul(relu1, mat2) + bias2
-sig2   = tf.math.sigmoid(fc2)
-out    = tf.reshape(sig2, [1, 7, 7, 90])
+relu2  = tf.nn.relu(fc2)
+
+fc3    = tf.matmul(relu2, mat3) + bias3
 
 ###############################################################
 
 loss, precision, recall = yolo_loss(out, coords_ph, obj_ph, no_obj_ph, cat_ph)
 train = tf.train.AdamOptimizer(learning_rate=args.lr, epsilon=args.eps).minimize(loss)
-
-# this still causing issues when we want to save variables with trainable=False
-params = tf.trainable_variables() # tf.global_variables() # global vars includes adam vars which we dont want
-
-weights = {}
-for p in params:
-    weights[p.name] = p
 
 ###############################################################
 
@@ -195,9 +159,6 @@ config = tf.ConfigProto(allow_soft_placement=True)
 config.gpu_options.allow_growth=True
 sess = tf.Session(config=config)
 sess.run(tf.global_variables_initializer())
-
-[w] = sess.run([weights], feed_dict={})
-np.save('yolo_weights', w)
 
 ###############################################################
 
@@ -222,13 +183,7 @@ while True:
         counter = counter + 1
 
         if (counter % 1000 == 0):
-            # we changed our prediction encoding, so this will likely break.
-            # draw_boxes('%d.jpg' % (counter), image, p)
             write("%d: %f %f %f" % (counter, np.average(losses), np.average(precs), np.average(recs)))
-
-        if (counter % 10000 == 0):
-            [w] = sess.run([weights], feed_dict={})
-            np.save('yolo_weights', w)
 
 ###############################################################
 
