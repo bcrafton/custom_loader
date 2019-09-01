@@ -50,7 +50,7 @@ def write(text):
 ##############################################
 
 loader = LoadCOCO()
-weights = np.load('yolo_weights.npy', allow_pickle=True).item()
+weights = np.load('small_yolo_weights.npy', allow_pickle=True).item()
 
 ##############################################
 
@@ -72,14 +72,20 @@ def max_pool(x, s):
 
 def conv(x, f, p, w, name):
     fw, fh, fi, fo = f
-    assert(np.shape(w) == f)
 
     if w:
-        filters = tf.Variable(w[name], dtype=tf.float32, trainable=False)
-        bias = tf.Variable(w[name + '_bias'], dtype=tf.float32, trainable=False)
+        filters_np = w[name]
+        bias_np    = w[name + '_bias']
     else:
-        filters = tf.Variable(init_filters(size=[fw, fh, fi, fo], init='alexnet'), dtype=tf.float32)
-        filters = tf.Variable(np.zeros(shape=fo), dtype=tf.float32)
+        filters_np = init_filters(size=[fw, fh, fi, fo], init='alexnet')
+        bias_np    = np.zeros(shape=fo)
+
+    if not (np.shape(filters_np) == f):
+        print (np.shape(filters_np), f)
+        assert(np.shape(filters_np) == f)
+
+    filters = tf.Variable(filters_np, dtype=tf.float32, trainable=False)
+    bias    = tf.Variable(bias_np,    dtype=tf.float32, trainable=False)
 
     conv = tf.nn.conv2d(x, filters, [1,p,p,1], 'SAME') + bias
     relu = tf.nn.relu(conv)
@@ -96,38 +102,38 @@ cat_ph    = tf.placeholder(tf.int32, [None, 7, 7])
 
 ###############################################################
 
-conv1 = conv(image_ph, [7,7,3,64], 2, weights, 'conv_1')          # 448
+conv1 = conv(image_ph, (7,7,3,64), 2, weights, 'conv_1')          # 448
 pool1 = max_pool(conv1, 2)                                        # 224
-conv2 = conv(pool1, [3,3,64,192], 1, weights, 'conv_2')           # 112
+conv2 = conv(pool1, (3,3,64,192), 1, weights, 'conv_2')           # 112
 pool2 = max_pool(conv2, 2)                                        # 112
 
-conv3 = conv(pool2, [1,1,192,128], 1, weights, 'conv_3')          # 56
-conv4 = conv(conv3, [3,3,128,256], 1, weights, 'conv_4')          # 56
-conv5 = conv(conv4, [1,1,256,256], 1, weights, 'conv_5')          # 56
-conv6 = conv(conv5, [3,3,256,512], 1, weights, 'conv_6')          # 56
+conv3 = conv(pool2, (1,1,192,128), 1, weights, 'conv_3')          # 56
+conv4 = conv(conv3, (3,3,128,256), 1, weights, 'conv_4')          # 56
+conv5 = conv(conv4, (1,1,256,256), 1, weights, 'conv_5')          # 56
+conv6 = conv(conv5, (3,3,256,512), 1, weights, 'conv_6')          # 56
 pool3 = max_pool(conv6, 2)                                        # 56
 
-conv7 = conv(pool2,   [1,1,512,256],  1, weights, 'conv_7')       # 28
-conv8 = conv(conv7,   [3,3,256,512],  1, weights, 'conv_8')       # 28
-conv9 = conv(conv8,   [1,1,512,256],  1, weights, 'conv_9')       # 28
-conv10 = conv(conv9,  [3,3,256,512],  1, weights, 'conv_10')      # 28
-conv11 = conv(pool10, [1,1,512,256],  1, weights, 'conv_11')      # 28
-conv12 = conv(conv11, [3,3,256,512],  1, weights, 'conv_12')      # 28
-conv13 = conv(conv12, [1,1,512,256],  1, weights, 'conv_13')      # 28
-conv14 = conv(conv13, [3,3,256,512],  1, weights, 'conv_14')      # 28
-conv15 = conv(conv14, [1,1,512,512],  1, weights, 'conv_15')      # 28
-conv16 = conv(conv15, [3,3,512,1024], 1, weights, 'conv_16')      # 28
+conv7 = conv(pool3,   (1,1,512,256),  1, weights, 'conv_7')       # 28
+conv8 = conv(conv7,   (3,3,256,512),  1, weights, 'conv_8')       # 28
+conv9 = conv(conv8,   (1,1,512,256),  1, weights, 'conv_9')       # 28
+conv10 = conv(conv9,  (3,3,256,512),  1, weights, 'conv_10')      # 28
+conv11 = conv(conv10, (1,1,512,256),  1, weights, 'conv_11')      # 28
+conv12 = conv(conv11, (3,3,256,512),  1, weights, 'conv_12')      # 28
+conv13 = conv(conv12, (1,1,512,256),  1, weights, 'conv_13')      # 28
+conv14 = conv(conv13, (3,3,256,512),  1, weights, 'conv_14')      # 28
+conv15 = conv(conv14, (1,1,512,512),  1, weights, 'conv_15')      # 28
+conv16 = conv(conv15, (3,3,512,1024), 1, weights, 'conv_16')      # 28
 pool4 = max_pool(conv16, 2)                                       # 28
 
-conv17 = conv(pool4,  [1,1,1024,512], 1, weights, 'conv_17')      # 14
-conv18 = conv(conv17, [3,3,512,1024], 1, weights, 'conv_18')      # 14
-conv19 = conv(conv18, [1,1,1024,512], 1, weights, 'conv_19')      # 14
-conv20 = conv(conv19, [3,3,512,1024], 1, weights, 'conv_20')      # 14
+conv17 = conv(pool4,  (1,1,1024,512), 1, weights, 'conv_17')      # 14
+conv18 = conv(conv17, (3,3,512,1024), 1, weights, 'conv_18')      # 14
+conv19 = conv(conv18, (1,1,1024,512), 1, weights, 'conv_19')      # 14
+conv20 = conv(conv19, (3,3,512,1024), 1, weights, 'conv_20')      # 14
 
-conv21 = conv(conv20, [3,3,1024,1024], 1, weights, 'conv_21')     # 14
-conv22 = conv(conv21, [3,3,1024,1024], 2, weights, 'conv_22')     # 14
-conv23 = conv(conv22, [3,3,1024,1024], 1, weights, 'conv_23')     # 7
-conv24 = conv(conv23, [3,3,1024,1024], 1, weights, 'conv_24')     # 7
+conv21 = conv(conv20, (3,3,1024,1024), 1, weights, 'conv_21')     # 14
+conv22 = conv(conv21, (3,3,1024,1024), 2, weights, 'conv_22')     # 14
+conv23 = conv(conv22, (3,3,1024,1024), 1, weights, 'conv_23')     # 7
+conv24 = conv(conv23, (3,3,1024,1024), 1, weights, 'conv_24')     # 7
 
 ###############################################################
 
@@ -135,18 +141,21 @@ mat1   = tf.Variable(weights['dense_1'], dtype=tf.float32)
 bias1  = tf.Variable(weights['dense_1_bias'], dtype=tf.float32)
 mat2   = tf.Variable(weights['dense_2'], dtype=tf.float32)
 bias2  = tf.Variable(weights['dense_2_bias'], dtype=tf.float32)
-mat3   = tf.Variable(weights['dense_3'], dtype=tf.float32)
-bias3  = tf.Variable(weights['dense_3_bias'], dtype=tf.float32)
+# mat3   = tf.Variable(weights['dense_3'], dtype=tf.float32)
+# bias3  = tf.Variable(weights['dense_3_bias'], dtype=tf.float32)
+mat3   = tf.Variable(init_matrix(size=(4096, 7*7*90), init='glorot_normal'), dtype=tf.float32)
+bias3  = tf.Variable(np.zeros(shape=7*7*90), dtype=tf.float32)
 
 flat   = tf.reshape(conv24, [1, 7*7*1024])
 
-fc1    = tf.matmul(flat,  mat1) + bias1
-relu1  = tf.nn.relu(fc1)
+dense1 = tf.matmul(flat,  mat1) + bias1
+relu1  = tf.nn.relu(dense1)
 
-fc2    = tf.matmul(relu1, mat2) + bias2
-relu2  = tf.nn.relu(fc2)
+dense2 = tf.matmul(relu1, mat2) + bias2
+relu2  = tf.nn.relu(dense2)
 
-fc3    = tf.matmul(relu2, mat3) + bias3
+dense3 = tf.matmul(relu2, mat3) + bias3
+out    = tf.reshape(dense3, [1, 7, 7, 90])
 
 ###############################################################
 
