@@ -206,7 +206,7 @@ while True:
 
         [p, i, l, prec, rec, _] = sess.run([out, iou, loss, precision, recall, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat})
 
-        draw_boxes('%d.jpg' % (counter), image, p, det)
+        draw_boxes('%d.jpg' % (counter), image, p, det, i)
 
         losses.append(l)
         precs.append(prec)

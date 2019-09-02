@@ -2,7 +2,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def draw_boxes(name, image, predict, det):
+def draw_boxes(name, image, predict, det, iou):
     # check shapes
     assert(np.shape(image) == (1, 448, 448, 3))
     image = np.reshape(image, (448, 448, 3))
@@ -45,7 +45,10 @@ def draw_boxes(name, image, predict, det):
 
         ##############################################
 
-        [x, y, w, h, _] = pred_box1[xc][yc]
+        if iou[ii][xc][yc][0] < iou[ii][xc][yc][1]:
+            [x, y, w, h, _] = pred_box2[xc][yc]
+        else:
+            [x, y, w, h, _] = pred_box1[xc][yc]
 
         x = int(x * 64. + xc * 64.)
         y = int(y * 64. + yc * 64.)
