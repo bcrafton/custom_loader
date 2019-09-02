@@ -206,14 +206,13 @@ while True:
 
         [p, i, l, prec, rec, _] = sess.run([out, iou, loss, precision, recall, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat})
 
-        draw_boxes('%d.jpg' % (counter), image, p, det, i)
-
         losses.append(l)
         precs.append(prec)
         recs.append(rec)
         counter = counter + 1
 
         if (counter % 1000 == 0):
+            draw_boxes('%d.jpg' % (counter), image, p, det, i)
             write("%d: %f %f %f" % (counter, np.average(losses), np.average(precs), np.average(recs)))
 
 ###############################################################

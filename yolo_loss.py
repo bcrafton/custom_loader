@@ -40,16 +40,21 @@ def yolo_loss(pred, label, obj, no_obj, cat):
     ######################################
 
     label_box = label[:, :, :, 0:4]
-    pred_box1 = pred[:, :, :, 0:4]
-    pred_box2 = pred[:, :, :, 5:9]
+    pred_box1 = tf.nn.relu(pred[:, :, :, 0:4])
+    pred_box2 = tf.nn.relu(pred[:, :, :, 5:9])
 
     label_xy = label[:, :, :, 0:2]
     pred_xy1 = pred[:, :, :, 0:2]
     pred_xy2 = pred[:, :, :, 5:7]
 
     label_wh = tf.sqrt(label[:, :, :, 2:4])
+    ############################
     pred_wh1 = tf.sqrt(tf.abs(pred[:, :, :, 2:4])) * tf.sign(pred[:, :, :, 2:4])
     pred_wh2 = tf.sqrt(tf.abs(pred[:, :, :, 7:9])) * tf.sign(pred[:, :, :, 7:9])
+
+    # pred_wh1 = tf.sqrt(tf.nn.relu(pred[:, :, :, 2:4]))
+    # pred_wh2 = tf.sqrt(tf.nn.relu(pred[:, :, :, 7:9]))
+    ############################
 
     label_conf = label[:, :, :, 4]
     pred_conf1 = pred[:, :, :, 4]

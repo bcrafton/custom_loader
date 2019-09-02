@@ -45,7 +45,10 @@ def draw_boxes(name, image, predict, det, iou):
 
         ##############################################
 
-        if iou[ii][xc][yc][0] < iou[ii][xc][yc][1]:
+        iou1 = iou[ii][xc][yc][0]
+        iou2 = iou[ii][xc][yc][1]
+        print (name, 'iou1: ', iou1, 'iou2: ', iou2)
+        if iou1 < iou2:
             [x, y, w, h, _] = pred_box2[xc][yc]
         else:
             [x, y, w, h, _] = pred_box1[xc][yc]
