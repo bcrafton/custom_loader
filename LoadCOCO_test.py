@@ -11,6 +11,10 @@ while True:
         image, (coords, objs, no_objs, cats) = loader.pop()
         image = np.squeeze(image)
 
+        image = image / np.max(image)
+        top = image
+        bottom = np.copy(image)
+
         for ii in range(len(coords)):
             coord = coords[ii]
             obj = objs[ii]
@@ -23,13 +27,6 @@ while True:
             w = int(w * 448.)
             h = int(h * 448.)
 
-            image = image / np.max(image)
-            top = image
-            '''
-            bottom = np.copy(image)
-            bottom[x:(x+w), y:(y+h), :] = 0.
-            '''
-            bottom = np.copy(image)
             [x11, x12, x21, x22] = [x, x+5, x+w-5, x+w]
             [y11, y12, y21, y22] = [y, y+5, y+h-5, y+h]
             red = np.array([1.0, 0.0, 0.0])
@@ -37,10 +34,8 @@ while True:
             bottom[x21:x22, y12:y21, :] = red
             bottom[x12:x21, y11:y12, :] = red
             bottom[x12:x21, y21:y22, :] = red
-            concat = np.concatenate((top, bottom), axis=1)
 
-            plt.imsave('%d.jpg' % (counter), concat)
-            break
-
+        concat = np.concatenate((top, bottom), axis=1)
+        plt.imsave('%d.jpg' % (counter), concat)
         print (counter)
         counter = counter + 1
