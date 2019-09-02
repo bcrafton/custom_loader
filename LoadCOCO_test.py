@@ -20,7 +20,7 @@ while True:
             obj = objs[ii]
 
             [xc, yc] = np.squeeze(np.where(obj > 0))
-            [x, y, w, h, _] = coord[xc][yc]
+            [x, y, w, h, conf] = coord[xc][yc]
 
             x = int(x * 64. + xc * 64.)
             y = int(y * 64. + yc * 64.)

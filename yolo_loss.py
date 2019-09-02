@@ -48,8 +48,8 @@ def yolo_loss(pred, label, obj, no_obj, cat):
     pred_xy2 = pred[:, :, :, 5:7]
 
     label_wh = tf.sqrt(label[:, :, :, 2:4])
-    pred_wh1 = tf.sqrt(pred[:, :, :, 2:4])
-    pred_wh2 = tf.sqrt(pred[:, :, :, 7:9])
+    pred_wh1 = tf.sqrt(tf.abs(pred[:, :, :, 2:4])) * tf.sign(pred[:, :, :, 2:4])
+    pred_wh2 = tf.sqrt(tf.abs(pred[:, :, :, 7:9])) * tf.sign(pred[:, :, :, 7:9])
 
     label_conf = label[:, :, :, 4]
     pred_conf1 = pred[:, :, :, 4]
@@ -64,21 +64,15 @@ def yolo_loss(pred, label, obj, no_obj, cat):
 
     ######################################
 
-    # TODO
-    # TP = (conf > thresh) and (pred_cat = label_cat) and (iou > 0.5)
-    # whatever thresh we use for FP we must also use to TP.
+    threshold = tf.ones_like(pred_conf1) * 0.2
+    conf_mask = tf.cast(tf.greater(tf.where(resp_box, tf.ones_like(obj) * pred_conf1, tf.ones_like(obj) * pred_conf2), threshold), tf.float32)
 
-    # https://towardsdatascience.com/breaking-down-mean-average-precision-map-ae462f623a52
-    # precision = TP / (TP + FP)
     TP = tf.count_nonzero(tf.greater(obj * tf.reduce_max(iou, axis=3), 0.5 * tf.ones_like(obj)))
     TP_FN = tf.count_nonzero(obj)
-    # need threshold value -> sigmoid activation
-    # sigmoid(0) = 0.5
-    threshold = tf.ones_like(pred_conf1) * tf.math.sigmoid(0.)
     TP_FP = tf.count_nonzero(tf.greater(pred_conf1, threshold)) + tf.count_nonzero(tf.greater(pred_conf2, threshold))
 
-    precision = tf.cast(TP, tf.float32) / tf.cast(TP_FP, tf.float32)
-    recall = tf.cast(TP, tf.float32) / tf.cast(TP_FN, tf.float32)
+    precision = tf.cast(TP, tf.float32) / (tf.cast(TP_FP, tf.float32) + 1e-3)
+    recall = tf.cast(TP, tf.float32) / (tf.cast(TP_FN, tf.float32) + 1e-3)
 
     ######################################
 
@@ -112,11 +106,10 @@ def yolo_loss(pred, label, obj, no_obj, cat):
     ######################################
 
     total_loss = xy_loss + wh_loss + obj_loss + no_obj_loss + cat_loss
-    # total_loss = tf.Print(total_loss, [tf.shape(xy_loss), tf.shape(wh_loss), tf.shape(obj_loss), tf.shape(no_obj_loss), tf.shape(cat_loss)], message='', summarize=1000)
 
     loss = tf.reduce_mean(tf.reduce_sum(total_loss, axis=[1, 2]))
 
-    return loss, precision, recall
+    return loss, precision, recall, iou
 
 
 
