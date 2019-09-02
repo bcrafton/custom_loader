@@ -2,6 +2,16 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+colors = [
+np.array([1.0, 0.0, 0.0]),
+np.array([0.0, 1.0, 0.0]),
+np.array([0.0, 0.0, 1.0]),
+
+np.array([1.0, 1.0, 0.0]),
+np.array([1.0, 0.0, 1.0]),
+np.array([0.0, 1.0, 1.0])
+]
+
 def draw_boxes(name, image, predict, det, iou):
     # check shapes
     assert(np.shape(image) == (1, 448, 448, 3))
@@ -18,7 +28,8 @@ def draw_boxes(name, image, predict, det, iou):
     pred_box1 = predict[:, :, 0:5]
     pred_box2 = predict[:, :, 5:10]
 
-    for ii in range(len(coords)):
+    nbox = min(len(coords), len(colors))
+    for ii in range(nbox):
         coord = coords[ii]
         obj = objs[ii]
 
@@ -37,11 +48,10 @@ def draw_boxes(name, image, predict, det, iou):
 
         [x11, x12, x21, x22] = [x, x+5, x+w-5, x+w]
         [y11, y12, y21, y22] = [y, y+5, y+h-5, y+h]
-        red = np.array([1.0, 0.0, 0.0])
-        top[x11:x12, y12:y21, :] = red
-        top[x21:x22, y12:y21, :] = red
-        top[x12:x21, y11:y12, :] = red
-        top[x12:x21, y21:y22, :] = red
+        top[x11:x12, y12:y21, :] = colors[ii]
+        top[x21:x22, y12:y21, :] = colors[ii]
+        top[x12:x21, y11:y12, :] = colors[ii]
+        top[x12:x21, y21:y22, :] = colors[ii]
 
         ##############################################
 
@@ -60,11 +70,10 @@ def draw_boxes(name, image, predict, det, iou):
 
         [x11, x12, x21, x22] = [x, x+5, x+w-5, x+w]
         [y11, y12, y21, y22] = [y, y+5, y+h-5, y+h]
-        red = np.array([1.0, 0.0, 0.0])
-        bottom[x11:x12, y12:y21, :] = red
-        bottom[x21:x22, y12:y21, :] = red
-        bottom[x12:x21, y11:y12, :] = red
-        bottom[x12:x21, y21:y22, :] = red
+        bottom[x11:x12, y12:y21, :] = colors[ii]
+        bottom[x21:x22, y12:y21, :] = colors[ii]
+        bottom[x12:x21, y11:y12, :] = colors[ii]
+        bottom[x12:x21, y21:y22, :] = colors[ii]
 
         ##############################################
 
