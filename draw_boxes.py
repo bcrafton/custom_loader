@@ -12,6 +12,15 @@ np.array([1.0, 0.0, 1.0]),
 np.array([0.0, 1.0, 1.0])
 ]
 
+color_names = [
+'red',
+'green',
+'blue',
+'yellow',
+'violet',
+'cyan'
+]
+
 def draw_boxes(name, image, predict, det, iou):
     # check shapes
     assert(np.shape(image) == (1, 448, 448, 3))
@@ -57,11 +66,13 @@ def draw_boxes(name, image, predict, det, iou):
 
         iou1 = iou[ii][xc][yc][0]
         iou2 = iou[ii][xc][yc][1]
-        print (name, 'iou1: ', iou1, 'iou2: ', iou2)
+
         if iou1 < iou2:
             [x, y, w, h, _] = pred_box2[xc][yc]
+            print (name, 'iou: ', iou2, color_names[ii])
         else:
             [x, y, w, h, _] = pred_box1[xc][yc]
+            print (name, 'iou: ', iou1, color_names[ii])
 
         x = int(x * 64. + xc * 64.)
         y = int(y * 64. + yc * 64.)
