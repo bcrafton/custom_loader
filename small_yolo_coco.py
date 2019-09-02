@@ -215,6 +215,16 @@ while True:
             draw_boxes('%d.jpg' % (counter), image, p, det, i)
             write("%d: %f %f %f" % (counter, np.average(losses), np.average(precs), np.average(recs)))
 
+            test_vector = {}
+            test_vector['image'] = image
+            test_vector['predict'] = p
+            test_vector['coords'] = coords
+            test_vector['obj'] = obj
+            test_vector['no_obj'] = no_obj
+            test_vector['cat'] = cat
+            test_vector['iou'] = i
+            np.save('test_vector_' + str(counter), test_vector)
+
 ###############################################################
 
 
