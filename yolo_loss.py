@@ -3,8 +3,8 @@ import numpy as np
 import tensorflow as tf
 
 offset_np = [
-[[0, 0], [0, 64], [0, 128], [0, 192], [0, 256], [0, 320], [0, 384]], 
-[[64, 0], [64, 64], [64, 128], [64, 192], [64, 256], [64, 320], [64, 384]], 
+[[0, 0],   [0, 64],   [0, 128],   [0, 192],   [0, 256],   [0, 320],   [0, 384]], 
+[[64, 0],  [64, 64],  [64, 128],  [64, 192],  [64, 256],  [64, 320],  [64, 384]], 
 [[128, 0], [128, 64], [128, 128], [128, 192], [128, 256], [128, 320], [128, 384]], 
 [[192, 0], [192, 64], [192, 128], [192, 192], [192, 256], [192, 320], [192, 384]], 
 [[256, 0], [256, 64], [256, 128], [256, 192], [256, 256], [256, 320], [256, 384]],  
@@ -69,18 +69,16 @@ def yolo_loss(pred, label, obj, no_obj, cat):
 
     label_wh = tf.sqrt(label[:, :, :, 2:4])
     ############################
+
     pred_wh1 = tf.sqrt(tf.abs(pred[:, :, :, 2:4])) * tf.sign(pred[:, :, :, 2:4])
     pred_wh2 = tf.sqrt(tf.abs(pred[:, :, :, 7:9])) * tf.sign(pred[:, :, :, 7:9])
 
-    # pred_wh1 = tf.sqrt(tf.nn.relu(pred[:, :, :, 2:4]))
-    # pred_wh2 = tf.sqrt(tf.nn.relu(pred[:, :, :, 7:9]))
     ############################
 
     label_conf = label[:, :, :, 4]
     pred_conf1 = pred[:, :, :, 4]
     pred_conf2 = pred[:, :, :, 9]
 
-    # we should only sigmoid the coordinate/confidence outputs
     label_cat = tf.one_hot(cat, depth=80)
     pred_cat = pred[:, :, :, 10:90]
     
