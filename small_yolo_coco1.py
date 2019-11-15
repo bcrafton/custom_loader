@@ -71,8 +71,8 @@ def max_pool(x, s):
     return tf.nn.max_pool(x, ksize=[1,s,s,1], strides=[1,s,s,1], padding='SAME')
 
 def batch_norm(x, f, name):
-    gamma = tf.Variable(np.ones(shape=f), dtype=tf.float32, name=name+'_gamma')
-    beta = tf.Variable(np.zeros(shape=f), dtype=tf.float32, name=name+'_beta')
+    gamma = tf.Variable(np.ones(shape=f), dtype=tf.float32, trainable=False)
+    beta = tf.Variable(np.zeros(shape=f), dtype=tf.float32, trainable=False)
     mean = tf.reduce_mean(x, axis=[0,1,2])
     _, var = tf.nn.moments(x - mean, axes=[0,1,2])
     bn = tf.nn.batch_normalization(x=x, mean=mean, variance=var, offset=beta, scale=gamma, variance_epsilon=1e-3)
@@ -107,7 +107,6 @@ coords_ph = tf.placeholder(tf.float32, [None, 7, 7, 5])
 obj_ph    = tf.placeholder(tf.float32, [None, 7, 7])
 no_obj_ph = tf.placeholder(tf.float32, [None, 7, 7])
 cat_ph    = tf.placeholder(tf.int32,   [None, 7, 7])
-offset_ph = tf.placeholder(tf.float32, [1, 7, 7, 2])
 
 ###############################################################
 
@@ -179,7 +178,7 @@ out    = tf.reshape(dense3, [1, 7, 7, 90])
 
 ###############################################################
 
-loss, precision, recall, iou = yolo_loss(out, coords_ph, obj_ph, no_obj_ph, cat_ph, offset_ph)
+loss, precision, recall, iou = yolo_loss(out, coords_ph, obj_ph, no_obj_ph, cat_ph)
 train = tf.train.AdamOptimizer(learning_rate=args.lr, epsilon=args.eps).minimize(loss)
 
 ###############################################################
@@ -198,13 +197,6 @@ recs = deque(maxlen=10000)
 
 ###############################################################
 
-offset = np.zeros(shape=(1,7,7,2))
-for ii in range(7):
-    for jj in range(7):
-        offset[0, ii, jj] = np.array([ii * 64., jj * 64.])
-
-###############################################################
-
 while True:
     if not loader.empty():
         image, det = loader.pop()
@@ -214,7 +206,7 @@ while True:
             print (coords)
             assert(not (np.any(coords < 0.) or np.any(coords > 1.1)))
 
-        [p, i, l, prec, rec, _] = sess.run([out, iou, loss, precision, recall, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat, offset_ph: offset})
+        [p, i, l, prec, rec, _] = sess.run([out, iou, loss, precision, recall, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat})
 
         losses.append(l)
         precs.append(prec)

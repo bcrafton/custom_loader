@@ -2,11 +2,22 @@
 import numpy as np
 import tensorflow as tf
 
-def grid_to_pix(box, offset):
+offset_np = [
+[[0, 0], [0, 64], [0, 128], [0, 192], [0, 256], [0, 320], [0, 384]], 
+[[64, 0], [64, 64], [64, 128], [64, 192], [64, 256], [64, 320], [64, 384]], 
+[[128, 0], [128, 64], [128, 128], [128, 192], [128, 256], [128, 320], [128, 384]], 
+[[192, 0], [192, 64], [192, 128], [192, 192], [192, 256], [192, 320], [192, 384]], 
+[[256, 0], [256, 64], [256, 128], [256, 192], [256, 256], [256, 320], [256, 384]],  
+[[320, 0], [320, 64], [320, 128], [320, 192], [320, 256], [320, 320], [320, 384]],  
+[[384, 0], [384, 64], [384, 128], [384, 192], [384, 256], [384, 320], [384, 384]]
+]
+
+offset = tf.constant(offset_np, dtype=tf.float32)
+
+def grid_to_pix(box):
     pix_box_xy = 64. * box[:, :, :, 0:2] + offset
     pix_box_wh = 448. * box[:, :, :, 2:4]
     pix_box = tf.concat((pix_box_xy, pix_box_wh), axis=3)
-    # pix_box = tf.Print(pix_box, [offset], message='', summarize=1000)
     return pix_box
 
 def calc_iou(boxA, boxB, realBox):
@@ -38,20 +49,19 @@ def calc_iou_help(boxA, boxB):
     # return the intersection over union value
     return iou
 
-def yolo_loss(pred, label, obj, no_obj, cat, offset):
+def yolo_loss(pred, label, obj, no_obj, cat):
 
     # pred   = [-1, 7, 7, 2 * 5 + 80]
     # label  = [-1, 7, 7, 5]
     # obj    = [-1, 7, 7]
     # no_obj = [-1, 7, 7]
     # cat    = [-1, 7, 7]
-    # offset = [1, 7, 7, 2]
 
     ######################################
 
-    label_box = grid_to_pix(label[:, :, :, 0:4], offset)
-    pred_box1 = grid_to_pix(tf.nn.relu(pred[:, :, :, 0:4]), offset)
-    pred_box2 = grid_to_pix(tf.nn.relu(pred[:, :, :, 5:9]), offset)
+    label_box = grid_to_pix(label[:, :, :, 0:4])
+    pred_box1 = grid_to_pix(tf.nn.relu(pred[:, :, :, 0:4]))
+    pred_box2 = grid_to_pix(tf.nn.relu(pred[:, :, :, 5:9]))
 
     label_xy = label[:, :, :, 0:2]
     pred_xy1 = pred[:, :, :, 0:2]
