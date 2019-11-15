@@ -13,8 +13,8 @@ import json
 
 #########################################
 
-exxact = 0
-icsrl2 = 1
+exxact = 1
+icsrl2 = 0
 
 if exxact:
     path = '/home/bcrafton3/Data_HDD/mscoco/'

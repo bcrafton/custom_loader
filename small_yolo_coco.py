@@ -52,31 +52,10 @@ def write(text):
 loader = LoadCOCO()
 weights = np.load('small_yolo_weights.npy', allow_pickle=True).item()
 
-##############################################
-
-def in_top_k(x, y, k):
-    x = tf.cast(x, dtype=tf.float32)
-    y = tf.cast(y, dtype=tf.int32)
-
-    _, topk = tf.nn.top_k(input=x, k=k)
-    topk = tf.transpose(topk)
-    correct = tf.equal(y, topk)
-    correct = tf.cast(correct, dtype=tf.int32)
-    correct = tf.reduce_sum(correct, axis=0)
-    return correct
-
 ###############################################################
 
 def max_pool(x, s):
     return tf.nn.max_pool(x, ksize=[1,s,s,1], strides=[1,s,s,1], padding='SAME')
-
-def batch_norm(x, f, name):
-    gamma = tf.Variable(np.ones(shape=f), dtype=tf.float32, name=name+'_gamma')
-    beta = tf.Variable(np.zeros(shape=f), dtype=tf.float32, name=name+'_beta')
-    mean = tf.reduce_mean(x, axis=[0,1,2])
-    _, var = tf.nn.moments(x - mean, axes=[0,1,2])
-    bn = tf.nn.batch_normalization(x=x, mean=mean, variance=var, offset=beta, scale=gamma, variance_epsilon=1e-3)
-    return bn
 
 def conv(x, f, p, w, name):
     fw, fh, fi, fo = f
@@ -100,19 +79,32 @@ def conv(x, f, p, w, name):
 
     return relu
 
+def dense(x, size, w, name):
+    input_size, output_size = size
+
+    if w:
+        weights_np = w[name]
+        bias_np    = w[name + '_bias']
+    else:
+        weights_np = init_matrix(size=size, init='alexnet')
+        bias_np    = np.zeros(shape=output_size)
+
+    w = tf.Variable(weights_np, dtype=tf.float32)
+    b  = tf.Variable(bias_np, dtype=tf.float32)
+    out = tf.matmul(x, w) + b
+    return out
+
 ###############################################################
 
 image_ph  = tf.placeholder(tf.float32, [1, 448, 448, 3])
 coords_ph = tf.placeholder(tf.float32, [None, 7, 7, 5])
 obj_ph    = tf.placeholder(tf.float32, [None, 7, 7])
 no_obj_ph = tf.placeholder(tf.float32, [None, 7, 7])
-cat_ph    = tf.placeholder(tf.int32, [None, 7, 7])
+cat_ph    = tf.placeholder(tf.int32,   [None, 7, 7])
 
 ###############################################################
 
-# x = image_ph
-# x = batch_norm(image_ph, 3, 'bn0')                              # 448
-x = (image_ph / 255.0) * 2.0 - 1.0
+x = (image_ph / 255.0) * 2.0 - 1.0                                # 448
 
 conv1 = conv(x, (7,7,3,64), 2, weights, 'conv_1')                 # 448
 pool1 = max_pool(conv1, 2)                                        # 224
@@ -147,34 +139,13 @@ conv22 = conv(conv21, (3,3,1024,1024), 2, weights, 'conv_22')     # 14
 conv23 = conv(conv22, (3,3,1024,1024), 1, weights, 'conv_23')     # 7
 conv24 = conv(conv23, (3,3,1024,1024), 1, weights, 'conv_24')     # 7
 
-###############################################################
+flat = tf.reshape(conv24, [1, 7*7*1024])
 
-'''
-mat1   = tf.Variable(weights['dense_1'], dtype=tf.float32)
-bias1  = tf.Variable(weights['dense_1_bias'], dtype=tf.float32)
-mat2   = tf.Variable(weights['dense_2'], dtype=tf.float32)
-bias2  = tf.Variable(weights['dense_2_bias'], dtype=tf.float32)
-mat3   = tf.Variable(weights['dense_3'], dtype=tf.float32)
-bias3  = tf.Variable(weights['dense_3_bias'], dtype=tf.float32)
-'''
+dense1 = tf.nn.relu(dense(flat,   (7*7*1024,    512), None, 'dense_1'))
+dense2 = tf.nn.relu(dense(dense1, (     512,   4096), None, 'dense_2'))
+dense3 =            dense(dense2, (    4096, 7*7*90), None, 'dense_3')
 
-mat1   = tf.Variable(init_matrix(size=(7*7*1024, 512), init='glorot_normal'), dtype=tf.float32)
-bias1  = tf.Variable(np.zeros(shape=512), dtype=tf.float32)
-mat2   = tf.Variable(init_matrix(size=(512, 4096), init='glorot_normal'), dtype=tf.float32)
-bias2  = tf.Variable(np.zeros(shape=4096), dtype=tf.float32)
-mat3   = tf.Variable(init_matrix(size=(4096, 7*7*90), init='glorot_normal'), dtype=tf.float32)
-bias3  = tf.Variable(np.zeros(shape=7*7*90), dtype=tf.float32)
-
-flat   = tf.reshape(conv24, [1, 7*7*1024])
-
-dense1 = tf.matmul(flat,  mat1) + bias1
-relu1  = tf.nn.relu(dense1)
-
-dense2 = tf.matmul(relu1, mat2) + bias2
-relu2  = tf.nn.relu(dense2)
-
-dense3 = tf.matmul(relu2, mat3) + bias3
-out    = tf.reshape(dense3, [1, 7, 7, 90])
+out = tf.reshape(dense3, [1, 7, 7, 90])
 
 ###############################################################
 
@@ -194,6 +165,8 @@ counter = 0
 losses = deque(maxlen=10000)
 precs = deque(maxlen=10000)
 recs = deque(maxlen=10000)
+
+###############################################################
 
 while True:
     if not loader.empty():
@@ -224,6 +197,7 @@ while True:
             test_vector['cat'] = cat
             test_vector['iou'] = i
             np.save('test_vector_' + str(counter), test_vector)
+            
 
 ###############################################################
 
