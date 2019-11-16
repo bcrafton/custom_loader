@@ -102,6 +102,8 @@ obj_ph    = tf.placeholder(tf.float32, [None, 7, 7])
 no_obj_ph = tf.placeholder(tf.float32, [None, 7, 7])
 cat_ph    = tf.placeholder(tf.int32,   [None, 7, 7])
 
+lr_ph = tf.placeholder(tf.float32, ())
+
 ###############################################################
 
 x = (image_ph / 255.0) * 2.0 - 1.0                                # 448
@@ -150,7 +152,7 @@ out = tf.reshape(dense3, [1, 7, 7, 90])
 ###############################################################
 
 loss, precision, recall, iou = yolo_loss(out, coords_ph, obj_ph, no_obj_ph, cat_ph)
-train = tf.train.AdamOptimizer(learning_rate=args.lr, epsilon=args.eps).minimize(loss)
+train = tf.train.AdamOptimizer(learning_rate=lr_ph, epsilon=args.eps).minimize(loss)
 
 ###############################################################
 
@@ -176,8 +178,10 @@ while True:
         if (np.any(coords < 0.) or np.any(coords > 1.1)):
             print (coords)
             assert(not (np.any(coords < 0.) or np.any(coords > 1.1)))
+    
+        lr = 1e-3 if counter < 50000 else 1e-2
 
-        [p, i, l, prec, rec, _] = sess.run([out, iou, loss, precision, recall, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat})
+        [p, i, l, prec, rec, _] = sess.run([out, iou, loss, precision, recall, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat, lr_ph: lr})
 
         losses.append(l)
         precs.append(prec)

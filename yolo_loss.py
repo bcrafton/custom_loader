@@ -63,13 +63,15 @@ def yolo_loss(pred, label, obj, no_obj, cat):
     pred_box1 = grid_to_pix(tf.nn.relu(pred[:, :, :, 0:4]))
     pred_box2 = grid_to_pix(tf.nn.relu(pred[:, :, :, 5:9]))
 
+    ############################
+
     label_xy = label[:, :, :, 0:2]
     pred_xy1 = pred[:, :, :, 0:2]
     pred_xy2 = pred[:, :, :, 5:7]
 
-    label_wh = tf.sqrt(label[:, :, :, 2:4])
     ############################
 
+    label_wh = tf.sqrt(label[:, :, :, 2:4])
     pred_wh1 = tf.sqrt(tf.abs(pred[:, :, :, 2:4])) * tf.sign(pred[:, :, :, 2:4])
     pred_wh2 = tf.sqrt(tf.abs(pred[:, :, :, 7:9])) * tf.sign(pred[:, :, :, 7:9])
 
@@ -87,7 +89,7 @@ def yolo_loss(pred, label, obj, no_obj, cat):
 
     ######################################
 
-    threshold = tf.ones_like(pred_conf1) * 0.2
+    threshold = tf.ones_like(pred_conf1) * 0.1
     conf_mask = tf.cast(tf.greater(tf.where(resp_box, tf.ones_like(obj) * pred_conf1, tf.ones_like(obj) * pred_conf2), threshold), tf.float32)
 
     TP = tf.count_nonzero(tf.greater(obj * tf.reduce_max(iou, axis=3), 0.5 * tf.ones_like(obj)))
@@ -128,7 +130,7 @@ def yolo_loss(pred, label, obj, no_obj, cat):
 
     ######################################
 
-    total_loss = xy_loss + wh_loss + obj_loss + no_obj_loss + cat_loss
+    total_loss = xy_loss + wh_loss + obj_loss + no_obj_loss # + cat_loss
     # total_loss = tf.Print(total_loss, [tf.shape(label_box), tf.math.reduce_std(label_box), tf.shape(pred_box1), tf.math.reduce_std(pred_box1)], message='', summarize=1000)
 
     loss = tf.reduce_mean(tf.reduce_sum(total_loss, axis=[1, 2]))
