@@ -21,6 +21,8 @@ def grid_to_pix(box):
     return pix_box
 
 def calc_iou(boxA, boxB, realBox):
+    # boxA = tf.Print(boxA, [tf.shape(boxA)], message='', summarize=1000)
+
     iou1 = calc_iou_help(boxA, realBox)
     iou2 = calc_iou_help(boxB, realBox)
     return tf.stack([iou1, iou2], 3)
@@ -60,8 +62,19 @@ def yolo_loss(pred, label, obj, no_obj, cat):
     ######################################
 
     label_box = grid_to_pix(label[:, :, :, 0:4])
-    pred_box1 = grid_to_pix(tf.nn.relu(pred[:, :, :, 0:4]))
-    pred_box2 = grid_to_pix(tf.nn.relu(pred[:, :, :, 5:9]))
+
+    # TODO
+    # is it right to use relu here ?
+    # think it could definitely reward bad x,y behavior
+    # pred_box1 = grid_to_pix(tf.nn.relu(pred[:, :, :, 0:4]))
+    # pred_box2 = grid_to_pix(tf.nn.relu(pred[:, :, :, 5:9]))
+
+    pred_box1 = grid_to_pix(pred[:, :, :, 0:4])
+    pred_box2 = grid_to_pix(pred[:, :, :, 5:9])
+
+    # are we supposed to be using the grid_to_pix boxes for training ? 
+    # then why did we convert them in the first place ? 
+    # shouldnt have to convert them back tho, just throw both in the dictionary. 
 
     ############################
 
@@ -71,9 +84,15 @@ def yolo_loss(pred, label, obj, no_obj, cat):
 
     ############################
 
-    label_wh = tf.sqrt(label[:, :, :, 2:4])
-    pred_wh1 = tf.sqrt(tf.abs(pred[:, :, :, 2:4])) * tf.sign(pred[:, :, :, 2:4])
-    pred_wh2 = tf.sqrt(tf.abs(pred[:, :, :, 7:9])) * tf.sign(pred[:, :, :, 7:9])
+    # label_wh = tf.sqrt(label[:, :, :, 2:4])
+    # pred_wh1 = tf.sqrt(tf.abs(pred[:, :, :, 2:4])) * tf.sign(pred[:, :, :, 2:4])
+    # pred_wh2 = tf.sqrt(tf.abs(pred[:, :, :, 7:9])) * tf.sign(pred[:, :, :, 7:9])
+
+    # TODO
+    # we dont have to be perfect, just trying to make things work.
+    label_wh = label[:, :, :, 2:4]
+    pred_wh1 = pred[:, :, :, 2:4]
+    pred_wh2 = pred[:, :, :, 7:9]
 
     ############################
 
@@ -81,9 +100,13 @@ def yolo_loss(pred, label, obj, no_obj, cat):
     pred_conf1 = pred[:, :, :, 4]
     pred_conf2 = pred[:, :, :, 9]
 
+    ############################
+
     label_cat = tf.one_hot(cat, depth=80)
     pred_cat = pred[:, :, :, 10:90]
     
+    ############################
+
     iou = calc_iou(pred_box1, pred_box2, label_box)
     resp_box = tf.greater(iou[:, :, :, 0], iou[:, :, :, 1])
 
@@ -131,8 +154,6 @@ def yolo_loss(pred, label, obj, no_obj, cat):
     ######################################
 
     total_loss = xy_loss + wh_loss + obj_loss + no_obj_loss # + cat_loss
-    # total_loss = tf.Print(total_loss, [tf.shape(label_box), tf.math.reduce_std(label_box), tf.shape(pred_box1), tf.math.reduce_std(pred_box1)], message='', summarize=1000)
-
     loss = tf.reduce_mean(tf.reduce_sum(total_loss, axis=[1, 2]))
 
     return loss, precision, recall, iou

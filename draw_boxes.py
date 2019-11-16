@@ -69,10 +69,10 @@ def draw_boxes(name, image, predict, det, iou):
 
         if iou1 < iou2:
             [x, y, w, h, _] = pred_box2[xc][yc]
-            print (name, 'iou: ', iou2, color_names[ii])
+            # print (name, 'iou: ', iou2, color_names[ii])
         else:
             [x, y, w, h, _] = pred_box1[xc][yc]
-            print (name, 'iou: ', iou1, color_names[ii])
+            # print (name, 'iou: ', iou1, color_names[ii])
 
         x = int(x * 64. + xc * 64.)
         y = int(y * 64. + yc * 64.)

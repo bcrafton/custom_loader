@@ -91,10 +91,13 @@ def get_det_table(json_filename):
 def preprocess(filename, det_table, cat_table):
     # image
     image = cv2.imread(filename)
+    assert(not np.any(np.isnan(image)))
     shape = np.shape(image)
     (w, h, _) = shape
     image = cv2.resize(image, (448, 448))
+    assert(not np.any(np.isnan(image)))
     image = np.reshape(image, [1, 448, 448, 3])
+    assert(not np.any(np.isnan(image)))
     scale_w = 448 / w
     scale_h = 448 / h
 

@@ -57,22 +57,24 @@ weights = np.load('small_yolo_weights.npy', allow_pickle=True).item()
 def max_pool(x, s):
     return tf.nn.max_pool(x, ksize=[1,s,s,1], strides=[1,s,s,1], padding='SAME')
 
-def conv(x, f, p, w, name):
+def conv(x, f, p, w, name, trainable=False):
     fw, fh, fi, fo = f
 
-    if w:
+    assert(w is not None)
+    if w is not None:
+        print ('loading %s' % (name))
         filters_np = w[name]
         bias_np    = w[name + '_bias']
     else:
-        filters_np = init_filters(size=[fw, fh, fi, fo], init='alexnet')
+        filters_np = init_filters(size=[fw, fh, fi, fo], init='glorot_uniform')
         bias_np    = np.zeros(shape=fo)
 
     if not (np.shape(filters_np) == f):
         print (np.shape(filters_np), f)
         assert(np.shape(filters_np) == f)
 
-    filters = tf.Variable(filters_np, dtype=tf.float32, trainable=False)
-    bias    = tf.Variable(bias_np,    dtype=tf.float32, trainable=False)
+    filters = tf.Variable(filters_np, dtype=tf.float32, trainable=trainable)
+    bias    = tf.Variable(bias_np,    dtype=tf.float32, trainable=trainable)
 
     conv = tf.nn.conv2d(x, filters, [1,p,p,1], 'SAME') + bias
     relu = tf.nn.relu(conv)
@@ -82,11 +84,12 @@ def conv(x, f, p, w, name):
 def dense(x, size, w, name):
     input_size, output_size = size
 
-    if w:
+    if w is not None:
+        print ('loading %s' % (name))
         weights_np = w[name]
         bias_np    = w[name + '_bias']
     else:
-        weights_np = init_matrix(size=size, init='alexnet')
+        weights_np = init_matrix(size=size, init='glorot_uniform')
         bias_np    = np.zeros(shape=output_size)
 
     w = tf.Variable(weights_np, dtype=tf.float32)
@@ -136,10 +139,10 @@ conv18 = conv(conv17, (3,3,512,1024), 1, weights, 'conv_18')      # 14
 conv19 = conv(conv18, (1,1,1024,512), 1, weights, 'conv_19')      # 14
 conv20 = conv(conv19, (3,3,512,1024), 1, weights, 'conv_20')      # 14
 
-conv21 = conv(conv20, (3,3,1024,1024), 1, weights, 'conv_21')     # 14
-conv22 = conv(conv21, (3,3,1024,1024), 2, weights, 'conv_22')     # 14
-conv23 = conv(conv22, (3,3,1024,1024), 1, weights, 'conv_23')     # 7
-conv24 = conv(conv23, (3,3,1024,1024), 1, weights, 'conv_24')     # 7
+conv21 = conv(conv20, (3,3,1024,1024), 1, weights, 'conv_21', trainable=True)     # 14
+conv22 = conv(conv21, (3,3,1024,1024), 2, weights, 'conv_22', trainable=True)     # 14
+conv23 = conv(conv22, (3,3,1024,1024), 1, weights, 'conv_23', trainable=True)     # 7
+conv24 = conv(conv23, (3,3,1024,1024), 1, weights, 'conv_24', trainable=True)     # 7
 
 flat = tf.reshape(conv24, [1, 7*7*1024])
 
@@ -164,9 +167,9 @@ sess.run(tf.global_variables_initializer())
 ###############################################################
 
 counter = 0
-losses = deque(maxlen=10000)
-precs = deque(maxlen=10000)
-recs = deque(maxlen=10000)
+losses = deque(maxlen=1000)
+precs = deque(maxlen=1000)
+recs = deque(maxlen=1000)
 
 ###############################################################
 
@@ -179,9 +182,13 @@ while True:
             print (coords)
             assert(not (np.any(coords < 0.) or np.any(coords > 1.1)))
     
-        lr = 1e-3 if counter < 50000 else 1e-2
+        lr = 1e-4 if counter < 50000 else 1e-3
 
         [p, i, l, prec, rec, _] = sess.run([out, iou, loss, precision, recall, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat, lr_ph: lr})
+
+        assert(not np.any(np.isnan(image)))
+        assert(not np.any(np.isnan(p)))
+        assert(not np.any(np.isnan(i)))
 
         losses.append(l)
         precs.append(prec)
@@ -190,7 +197,7 @@ while True:
 
         if (counter % 1000 == 0):
             draw_boxes('%d.jpg' % (counter), image, p, det, i)
-            write("%d: %f %f %f" % (counter, np.average(losses), np.average(precs), np.average(recs)))
+            write("%d: lr %f loss %f precision %f recall %f" % (counter, lr, np.average(losses), np.average(precs), np.average(recs)))
 
             test_vector = {}
             test_vector['image'] = image
