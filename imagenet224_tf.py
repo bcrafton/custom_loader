@@ -181,6 +181,7 @@ def get_train_dataset():
 
 filename = tf.placeholder(tf.string, shape=[None])
 label = tf.placeholder(tf.int64, shape=[None])
+lr = tf.placeholder(tf.float32, shape=())
 
 ###############################################################
 
@@ -268,42 +269,39 @@ weights = np.load('small_yolo_weights.npy', allow_pickle=True).item()
 
 ###############################################################
 
-x = (features / 255.0) * 2.0 - 1.0                                # 448
+x = (features / 255.0) * 2.0 - 1.0                                # 224
 
-conv1 = conv(x, (7,7,3,64), 2, weights, 'conv_1')                 # 448
-pool1 = max_pool(conv1, 2)                                        # 224
-conv2 = conv(pool1, (3,3,64,192), 1, weights, 'conv_2')           # 112
-pool2 = max_pool(conv2, 2)                                        # 112
+conv1 = conv(x, (7,7,3,64), 2, weights, 'conv_1')                 # 224
+pool1 = max_pool(conv1, 2)                                        # 112
+conv2 = conv(pool1, (3,3,64,192), 1, weights, 'conv_2')           # 56
+pool2 = max_pool(conv2, 2)                                        # 56
 
-conv3 = conv(pool2, (1,1,192,128), 1, weights, 'conv_3')          # 56
-conv4 = conv(conv3, (3,3,128,256), 1, weights, 'conv_4')          # 56
-conv5 = conv(conv4, (1,1,256,256), 1, weights, 'conv_5')          # 56
-conv6 = conv(conv5, (3,3,256,512), 1, weights, 'conv_6')          # 56
-pool3 = max_pool(conv6, 2)                                        # 56
+conv3 = conv(pool2, (1,1,192,128), 1, weights, 'conv_3')          # 28
+conv4 = conv(conv3, (3,3,128,256), 1, weights, 'conv_4')          # 28
+conv5 = conv(conv4, (1,1,256,256), 1, weights, 'conv_5')          # 28
+conv6 = conv(conv5, (3,3,256,512), 1, weights, 'conv_6')          # 28
+pool3 = max_pool(conv6, 2)                                        # 28
 
-conv7 = conv(pool3,   (1,1,512,256),  1, weights, 'conv_7')       # 28
-conv8 = conv(conv7,   (3,3,256,512),  1, weights, 'conv_8')       # 28
-conv9 = conv(conv8,   (1,1,512,256),  1, weights, 'conv_9')       # 28
-conv10 = conv(conv9,  (3,3,256,512),  1, weights, 'conv_10')      # 28
-conv11 = conv(conv10, (1,1,512,256),  1, weights, 'conv_11')      # 28
-conv12 = conv(conv11, (3,3,256,512),  1, weights, 'conv_12')      # 28
-conv13 = conv(conv12, (1,1,512,256),  1, weights, 'conv_13')      # 28
-conv14 = conv(conv13, (3,3,256,512),  1, weights, 'conv_14')      # 28
-conv15 = conv(conv14, (1,1,512,512),  1, weights, 'conv_15')      # 28
-conv16 = conv(conv15, (3,3,512,1024), 1, weights, 'conv_16')      # 28
-pool4 = max_pool(conv16, 2)                                       # 28
+conv7 = conv(pool3,   (1,1,512,256),  1, weights, 'conv_7')       # 14
+conv8 = conv(conv7,   (3,3,256,512),  1, weights, 'conv_8')       # 14
+conv9 = conv(conv8,   (1,1,512,256),  1, weights, 'conv_9')       # 14
+conv10 = conv(conv9,  (3,3,256,512),  1, weights, 'conv_10')      # 14
+conv11 = conv(conv10, (1,1,512,256),  1, weights, 'conv_11')      # 14
+conv12 = conv(conv11, (3,3,256,512),  1, weights, 'conv_12')      # 14
+conv13 = conv(conv12, (1,1,512,256),  1, weights, 'conv_13')      # 14
+conv14 = conv(conv13, (3,3,256,512),  1, weights, 'conv_14')      # 14
+conv15 = conv(conv14, (1,1,512,512),  1, weights, 'conv_15')      # 14
+conv16 = conv(conv15, (3,3,512,1024), 1, weights, 'conv_16')      # 14
+pool4 = max_pool(conv16, 2)                                       # 14
 
-conv17 = conv(pool4,  (1,1,1024,512), 1, weights, 'conv_17')      # 14
-conv18 = conv(conv17, (3,3,512,1024), 1, weights, 'conv_18')      # 14
-conv19 = conv(conv18, (1,1,1024,512), 1, weights, 'conv_19')      # 14
-conv20 = conv(conv19, (3,3,512,1024), 1, weights, 'conv_20')      # 14
+conv17 = conv(pool4,  (1,1,1024,512), 1, weights, 'conv_17')      # 7
+conv18 = conv(conv17, (3,3,512,1024), 1, weights, 'conv_18')      # 7
+conv19 = conv(conv18, (1,1,1024,512), 1, weights, 'conv_19')      # 7
+conv20 = conv(conv19, (3,3,512,1024), 1, weights, 'conv_20')      # 7
 
-conv21 = conv(conv20, (3,3,1024,1024), 1, weights, 'conv_21', trainable=True)     # 14
-conv22 = conv(conv21, (3,3,1024,1024), 2, weights, 'conv_22', trainable=True)     # 14
-conv23 = conv(conv22, (3,3,1024,1024), 1, weights, 'conv_23', trainable=True)     # 7
-conv24 = conv(conv23, (3,3,1024,1024), 1, weights, 'conv_24', trainable=True)     # 7
-
-
+pool = tf.nn.avg_pool(conv20, ksize=[1,7,7,1], strides=[1,7,7,1], padding='SAME')
+flat = tf.reshape(pool, [args.batch_size, 1024])
+fc1  = dense(flat, (1024, 1000), None, 'dense1')
 
 ###############################################################
 
@@ -353,7 +351,7 @@ for ii in range(args.epochs):
 
     for jj in range(0, len(train_imgs), args.batch_size):
 
-        [_total_correct, _] = sess.run([total_correct, train], feed_dict={handle: train_handle, batch_size: args.batch_size, lr: args.lr})
+        [_total_correct, _] = sess.run([total_correct, train], feed_dict={handle: train_handle, lr: args.lr})
 
         train_total += args.batch_size
         train_correct += _total_correct
@@ -373,7 +371,7 @@ for ii in range(args.epochs):
 
     for jj in range(0, len(val_imgs), args.batch_size):
 
-        [_total_correct] = sess.run([total_correct], feed_dict={handle: val_handle, batch_size: args.batch_size, lr: 0.0})
+        [_total_correct] = sess.run([total_correct], feed_dict={handle: val_handle, lr: 0.0})
 
         val_total += args.batch_size
         val_correct += _total_correct
