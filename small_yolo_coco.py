@@ -168,8 +168,8 @@ sess.run(tf.global_variables_initializer())
 
 counter = 0
 losses = deque(maxlen=1000)
-precs = deque(maxlen=1000)
-recs = deque(maxlen=1000)
+precisions = deque(maxlen=1000)
+recalls = deque(maxlen=1000)
 
 ###############################################################
 
@@ -182,31 +182,31 @@ while True:
             print (coords)
             assert(not (np.any(coords < 0.) or np.any(coords > 1.1)))
     
-        lr = 1e-4 if counter < 50000 else 1e-3
+        lr = 1e-3 if counter < 50000 else 1e-2
 
-        [p, i, l, prec, rec, _] = sess.run([out, iou, loss, precision, recall, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat, lr_ph: lr})
+        [out_np, iou_np, loss_np, precision_np, recall_np, _] = sess.run([out, iou, loss, precision, recall, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat, lr_ph: lr})
 
         assert(not np.any(np.isnan(image)))
-        assert(not np.any(np.isnan(p)))
-        assert(not np.any(np.isnan(i)))
+        assert(not np.any(np.isnan(out_np)))
+        assert(not np.any(np.isnan(iou_np)))
 
-        losses.append(l)
-        precs.append(prec)
-        recs.append(rec)
+        losses.append(loss_np)
+        precisions.append(precision_np)
+        recalls.append(recall_np)
         counter = counter + 1
 
-        if (counter % 1000 == 0):
-            draw_boxes('%d.jpg' % (counter), image, p, det, i)
-            write("%d: lr %f loss %f precision %f recall %f" % (counter, lr, np.average(losses), np.average(precs), np.average(recs)))
+        if (counter % 100 == 0):
+            draw_boxes('%d.jpg' % (counter), image, out_np, det, iou_np)
+            write("%d: lr %f loss %f precision %f recall %f" % (counter, lr, np.average(losses), np.average(precisions), np.average(recalls)))
 
             test_vector = {}
             test_vector['image'] = image
-            test_vector['predict'] = p
+            test_vector['predict'] = out_np
             test_vector['coords'] = coords
             test_vector['obj'] = obj
             test_vector['no_obj'] = no_obj
             test_vector['cat'] = cat
-            test_vector['iou'] = i
+            test_vector['iou'] = iou_np
             np.save('test_vector_' + str(counter), test_vector)
             
 
