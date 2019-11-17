@@ -77,7 +77,7 @@ def conv(x, f, p, w, name, trainable=False):
     bias    = tf.Variable(bias_np,    dtype=tf.float32, trainable=trainable)
 
     conv = tf.nn.conv2d(x, filters, [1,p,p,1], 'SAME') + bias
-    relu = tf.nn.relu(conv)
+    relu = tf.nn.leaky_relu(conv, 0.1)
 
     return relu
 

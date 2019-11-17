@@ -125,9 +125,11 @@ def preprocess(filename, det_table, cat_table):
             print (x, y, w, h, shape, scale_w, scale_h)
             assert(x <= 448.1 and y <= 448.1 and w <= 448.1 and h <= 448.1)
 
-        if not (x >= 447.9 and y >= 447.9 and w >= 447.9 and h >= 447.9):
-            print (x, y, w, h, shape, scale_w, scale_h)
-            assert(x >= 447.9 and y >= 447.9 and w >= 447.9 and h >= 447.9)
+        '''
+        if not (w >= 447.9 and h >= 447.9):
+            print (shape, w, h, scale_w, scale_h)
+            assert(w >= 447.9 and h >= 447.9)
+        '''
 
         xc = int(x) // 64
         yc = int(y) // 64
