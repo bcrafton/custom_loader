@@ -112,13 +112,21 @@ def yolo_loss(pred, label, obj, no_obj, cat):
 
     ######################################
 
-    threshold = tf.ones_like(pred_conf1) * 0.0
-    conf_mask = tf.cast(tf.greater(tf.where(resp_box, tf.ones_like(obj) * pred_conf1, tf.ones_like(obj) * pred_conf2), threshold), tf.float32)
+    iou_threshold = 0.3 * tf.ones_like(obj)
+    conf_threshold = 0.5 * tf.ones_like(pred_conf1)
 
-    TP = tf.count_nonzero(tf.greater(obj * tf.reduce_max(iou, axis=3), 0.5 * tf.ones_like(obj)))
+    # we never actually use conf_mask, what was this for ? 
+    # this was to artificaly boost accuracy I think ... for precision only look at obj.
+    # conf_mask = tf.cast(tf.greater(tf.where(resp_box, tf.ones_like(obj) * pred_conf1, tf.ones_like(obj) * pred_conf2), threshold), tf.float32)
+
+    iou_mask = tf.greater(obj * tf.reduce_max(iou, axis=3), iou_threshold)
+    conf_mask = tf.greater(tf.where(resp_box, tf.ones_like(obj) * pred_conf1, tf.ones_like(obj) * pred_conf2), conf_threshold)
+
+    TP = tf.count_nonzero(tf.logical_and(iou_mask, conf_mask))
     TP_FN = tf.count_nonzero(obj)
-    TP_FP = tf.count_nonzero(tf.greater(pred_conf1, threshold)) + tf.count_nonzero(tf.greater(pred_conf2, threshold))
+    TP_FP = tf.count_nonzero(tf.greater(pred_conf1, conf_threshold)) + tf.count_nonzero(tf.greater(pred_conf2, conf_threshold))
 
+    # these should definitely be done in numpy ...
     precision = tf.cast(TP, tf.float32) / (tf.cast(TP_FP, tf.float32) + 1e-3)
     recall = tf.cast(TP, tf.float32) / (tf.cast(TP_FN, tf.float32) + 1e-3)
 
@@ -158,7 +166,7 @@ def yolo_loss(pred, label, obj, no_obj, cat):
 
     ######################################
 
-    loss = xy_loss + wh_loss + obj_loss + no_obj_loss # + cat_loss
+    loss = xy_loss + wh_loss + obj_loss + no_obj_loss + cat_loss
     # loss = tf.Print(loss, [xy_loss, wh_loss, obj_loss, no_obj_loss], message='', summarize=1000)
 
     return loss, precision, recall, iou
