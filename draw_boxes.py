@@ -57,10 +57,10 @@ def draw_boxes(name, image, predict, det, iou):
 
         [x11, x12, x21, x22] = [x, x+5, x+w-5, x+w]
         [y11, y12, y21, y22] = [y, y+5, y+h-5, y+h]
-        top[x11:x12, y12:y21, :] = colors[ii]
-        top[x21:x22, y12:y21, :] = colors[ii]
-        top[x12:x21, y11:y12, :] = colors[ii]
-        top[x12:x21, y21:y22, :] = colors[ii]
+        top[y11:y12, x12:x21, :] = colors[ii]
+        top[y21:y22, x12:x21, :] = colors[ii]
+        top[y12:y21, x11:x12, :] = colors[ii]
+        top[y12:y21, x21:x22, :] = colors[ii]
 
         ##############################################
 
