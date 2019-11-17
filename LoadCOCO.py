@@ -93,7 +93,7 @@ def preprocess(filename, det_table, cat_table):
     image = cv2.imread(filename)
     assert(not np.any(np.isnan(image)))
     shape = np.shape(image)
-    (w, h, _) = shape
+    (h, w, _) = shape
     image = cv2.resize(image, (448, 448))
     assert(not np.any(np.isnan(image)))
     image = np.reshape(image, [1, 448, 448, 3])
@@ -112,10 +112,12 @@ def preprocess(filename, det_table, cat_table):
     for ii in range(ndets):
         det = dets[ii]
         # are we sure this is bounding box encoding ? 
-        [y, x, h, w], cat_id = det
+        [x, y, w, h], cat_id = det
 
         cat = cat_table[cat_id]
 
+        # these are bbox coords, not image shape.
+        # all should be less than 448, but no lower bound.
         x = x * scale_w
         y = y * scale_h
         w = w * scale_w
@@ -124,12 +126,6 @@ def preprocess(filename, det_table, cat_table):
         if not (x <= 448.1 and y <= 448.1 and w <= 448.1 and h <= 448.1):
             print (x, y, w, h, shape, scale_w, scale_h)
             assert(x <= 448.1 and y <= 448.1 and w <= 448.1 and h <= 448.1)
-
-        '''
-        if not (w >= 447.9 and h >= 447.9):
-            print (shape, w, h, scale_w, scale_h)
-            assert(w >= 447.9 and h >= 447.9)
-        '''
 
         xc = int(x) // 64
         yc = int(y) // 64

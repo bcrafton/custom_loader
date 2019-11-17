@@ -57,15 +57,17 @@ weights = np.load('small_yolo_weights.npy', allow_pickle=True).item()
 def max_pool(x, s):
     return tf.nn.max_pool(x, ksize=[1,s,s,1], strides=[1,s,s,1], padding='SAME')
 
-def conv(x, f, p, w, name, trainable=False):
+def conv(x, f, p, w, name):
     fw, fh, fi, fo = f
 
-    assert(w is not None)
+    trainable = (w == None)
+
     if w is not None:
-        print ('loading %s' % (name))
+        print ('loading %s | trainable %d ' % (name, trainable))
         filters_np = w[name]
         bias_np    = w[name + '_bias']
     else:
+        print ('making %s | trainable %d ' % (name, trainable))
         filters_np = init_filters(size=[fw, fh, fi, fo], init='glorot_uniform')
         bias_np    = np.zeros(shape=fo)
 
@@ -84,16 +86,20 @@ def conv(x, f, p, w, name, trainable=False):
 def dense(x, size, w, name):
     input_size, output_size = size
 
+    trainable = (w == None)
+
     if w is not None:
-        print ('loading %s' % (name))
+        print ('loading %s | trainable %d ' % (name, trainable))
         weights_np = w[name]
         bias_np    = w[name + '_bias']
     else:
+        print ('making %s | trainable %d ' % (name, trainable))
         weights_np = init_matrix(size=size, init='glorot_uniform')
         bias_np    = np.zeros(shape=output_size)
 
-    w = tf.Variable(weights_np, dtype=tf.float32)
-    b  = tf.Variable(bias_np, dtype=tf.float32)
+    w = tf.Variable(weights_np, dtype=tf.float32, trainable=trainable)
+    b  = tf.Variable(bias_np, dtype=tf.float32, trainable=trainable)
+
     out = tf.matmul(x, w) + b
     return out
 
@@ -139,10 +145,10 @@ conv18 = conv(conv17, (3,3,512,1024), 1, weights, 'conv_18')      # 14
 conv19 = conv(conv18, (1,1,1024,512), 1, weights, 'conv_19')      # 14
 conv20 = conv(conv19, (3,3,512,1024), 1, weights, 'conv_20')      # 14
 
-conv21 = conv(conv20, (3,3,1024,1024), 1, weights, 'conv_21', trainable=True)     # 14
-conv22 = conv(conv21, (3,3,1024,1024), 2, weights, 'conv_22', trainable=True)     # 14
-conv23 = conv(conv22, (3,3,1024,1024), 1, weights, 'conv_23', trainable=True)     # 7
-conv24 = conv(conv23, (3,3,1024,1024), 1, weights, 'conv_24', trainable=True)     # 7
+conv21 = conv(conv20, (3,3,1024,1024), 1, weights, 'conv_21')     # 14
+conv22 = conv(conv21, (3,3,1024,1024), 2, weights, 'conv_22')     # 14
+conv23 = conv(conv22, (3,3,1024,1024), 1, weights, 'conv_23')     # 7
+conv24 = conv(conv23, (3,3,1024,1024), 1, weights, 'conv_24')     # 7
 
 flat = tf.reshape(conv24, [1, 7*7*1024])
 
