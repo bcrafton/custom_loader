@@ -106,7 +106,7 @@ def dense(x, size, w, name):
 ###############################################################
 
 image_ph  = tf.placeholder(tf.float32, [args.batch_size, 448, 448, 3])
-coords_ph = tf.placeholder(tf.float32, [args.batch_size, None, 7, 7, 5])
+coord_ph = tf.placeholder(tf.float32, [args.batch_size, None, 7, 7, 5])
 obj_ph    = tf.placeholder(tf.float32, [args.batch_size, None, 7, 7])
 no_obj_ph = tf.placeholder(tf.float32, [args.batch_size, None, 7, 7])
 cat_ph    = tf.placeholder(tf.int32,   [args.batch_size, None, 7, 7])
@@ -160,7 +160,7 @@ out = tf.reshape(dense2, [args.batch_size, 7, 7, 90])
 
 ###############################################################
 
-loss = yolo_loss(out, coords_ph, obj_ph, no_obj_ph, cat_ph, vld_ph)
+loss = yolo_loss(out, coord_ph, obj_ph, no_obj_ph, cat_ph, vld_ph)
 train = tf.train.AdamOptimizer(learning_rate=lr_ph, epsilon=args.eps).minimize(loss)
 
 ###############################################################
@@ -176,120 +176,49 @@ counter = 0
 losses = deque(maxlen=1000)
 
 preds = deque(maxlen=100)
-labels = deque(maxlen=100)
+coords = deque(maxlen=100)
+objs = deque(maxlen=100)
+no_objs = deque(maxlen=100)
+cats = deque(maxlen=100)
+vlds = deque(maxlen=100)
 
-'''
-TPs = deque(maxlen=1000)
-TP_FPs = deque(maxlen=1000)
-TP_FNs = deque(maxlen=1000)
-'''
-
-###############################################################
-'''
-offset = [
-[[0, 0], [0, 64], [0, 128], [0, 192], [0, 256], [0, 320], [0, 384]], 
-[[64, 0], [64, 64], [64, 128], [64, 192], [64, 256], [64, 320], [64, 384]], 
-[[128, 0], [128, 64], [128, 128], [128, 192], [128, 256], [128, 320], [128, 384]], 
-[[192, 0], [192, 64], [192, 128], [192, 192], [192, 256], [192, 320], [192, 384]], 
-[[256, 0], [256, 64], [256, 128], [256, 192], [256, 256], [256, 320], [256, 384]],  
-[[320, 0], [320, 64], [320, 128], [320, 192], [320, 256], [320, 320], [320, 384]],  
-[[384, 0], [384, 64], [384, 128], [384, 192], [384, 256], [384, 320], [384, 384]]
-]
-
-def calc_iou(label, pred1, pred2):
-    iou1 = calc_iou_help(label, pred1)
-    iou2 = calc_iou_help(label, pred2)
-    return np.stack([iou1, iou2], 3)
-
-def calc_iou_help(boxA, boxB):
-    intersectionX = np.minimum(boxA[:, :, :, 0] + boxA[:, :, :, 2], boxB[:, :, :, 0] + boxB[:, :, :, 2]) - np.maximum(boxA[:, :, :, 0], boxB[:, :, :, 0])
-    intersectionY = np.minimum(boxA[:, :, :, 1] + boxA[:, :, :, 3], boxB[:, :, :, 1] + boxB[:, :, :, 3]) - np.maximum(boxA[:, :, :, 1], boxB[:, :, :, 1])
-    intersection = np.maximum(0., intersectionX) * np.maximum(0., intersectionY)
-    union = (boxA[:, :, :, 2] * boxA[:, :, :, 3]) + (boxB[:, :, :, 2] * boxB[:, :, :, 3]) - intersection
-    iou = intersection / union
-    return iou
-
-def grid_to_pix(box):
-    box[:, :, :, 0:2] = 64.  * box[:, :, :, 0:2] + offset
-    box[:, :, :, 2:4] = 448. * box[:, :, :, 2:4]
-    return box
-
-def mAP(label, pred, conf_thresh=0.2, iou_thresh=0.3):
-
-    label = np.reshape(grid_to_pix(label[:, :, :, 0:5]), (-1, 7, 7, 5))
-    pred1 = np.reshape(grid_to_pix(pred[:, :, :, 0:5]),   (1, 7, 7, 5))
-    pred2 = np.reshape(grid_to_pix(pred[:, :, :, 5:10]),  (1, 7, 7, 5))
-
-    iou = calc_iou(label, pred1, pred2)
-    resp_box = iou[:, :, :, 0] < iou[:, :, :, 1]
-
-    obj = label[:, :, :, 4]
-    pred_conf1 = pred1[:, :, :, 4]
-    pred_conf2 = pred2[:, :, :, 4]
-
-    ###############################
-
-    iou_mask = obj * np.max(iou, axis=3) > iou_thresh
-    conf_mask = np.where(resp_box, np.ones_like(obj) * pred_conf1, np.ones_like(obj) * pred_conf2) > conf_thresh
-
-    TP = np.count_nonzero(iou_mask * conf_mask)
-    TP_FP = np.count_nonzero(obj)
-    TP_FN = np.count_nonzero(pred_conf1 > conf_thresh) + np.count_nonzero(pred_conf2 > conf_thresh)
-
-    return TP, TP_FP, TP_FN
-'''
 ###############################################################
 
 while True:
     if not loader.empty():
         image, det = loader.pop()
-        coords, obj, no_obj, cat, vld = det
+        coord, obj, no_obj, cat, vld = det
 
-        if (np.any(coords < 0.) or np.any(coords > 1.1)):
-            print (coords)
-            assert(not (np.any(coords < 0.) or np.any(coords > 1.1)))
-    
+        # wtf why is this not triggering ? 
+        '''
+        if (np.any(coord < 0.) or np.any(coord > 1.1)):
+            print (coord)
+            assert(not (np.any(coord < 0.) or np.any(coord > 1.1)))
+        '''    
+
         lr = 1e-3 if counter < 50000 else 1e-2
 
-        [out_np, loss_np, _] = sess.run([out, loss, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat, vld_ph: vld, lr_ph: lr})
+        [out_np, loss_np, _] = sess.run([out, loss, train], feed_dict={image_ph: image, coord_ph: coord, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat, vld_ph: vld, lr_ph: lr})
 
         assert(not np.any(np.isnan(image)))
         assert(not np.any(np.isnan(out_np)))
 
         losses.append(loss_np)
         preds.append(out_np)
-        labels.append(det)
+        coords.append(coord)
+        objs.append(obj)
+        no_objs.append(no_obj)
+        cats.append(cat)
+        vlds.append(vld)
         counter = counter + 1
 
         ################################################
-        '''
-        TP, TP_FP, TP_FN = mAP(coords, out_np)
 
-        TPs.append(TP)
-        TP_FPs.append(TP_FP)
-        TP_FNs.append(TP_FN)
-
-        precision = np.sum(TPs) / (np.sum(TP_FPs) + 1e-3)
-        recall = np.sum(TPs) / (np.sum(TP_FNs) + 1e-3)
-        '''
-        ################################################
-
-        if (counter % 1000 == 0):
+        if (counter % 100 == 0):
             write('%d: lr %f loss %f' % (counter, lr, np.average(losses)))
             np.save('predictions', preds)
             np.save('labels', preds)
 
-            '''
-            test_vector = {}
-            test_vector['image'] = image
-            test_vector['predict'] = out_np
-            test_vector['coords'] = coords
-            test_vector['obj'] = obj
-            test_vector['no_obj'] = no_obj
-            test_vector['cat'] = cat
-            test_vector['iou'] = iou_np
-            np.save('test_vector_' + str(counter), test_vector)
-            '''
 
 ###############################################################
 
