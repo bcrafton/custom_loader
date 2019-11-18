@@ -175,12 +175,16 @@ sess.run(tf.global_variables_initializer())
 counter = 0
 losses = deque(maxlen=1000)
 
+results = {}
+
+'''
 preds = deque(maxlen=100)
 coords = deque(maxlen=100)
 objs = deque(maxlen=100)
 no_objs = deque(maxlen=100)
 cats = deque(maxlen=100)
 vlds = deque(maxlen=100)
+'''
 
 ###############################################################
 
@@ -204,20 +208,25 @@ while True:
         assert(not np.any(np.isnan(out_np)))
 
         losses.append(loss_np)
+
+        '''
         preds.append(out_np)
         coords.append(coord)
         objs.append(obj)
         no_objs.append(no_obj)
         cats.append(cat)
         vlds.append(vld)
+        '''
+        results['pred%d' % (counter)] = pred
+        results['label%d' % (counter)] = det
+
         counter = counter + 1
 
         ################################################
 
         if (counter % 100 == 0):
             write('%d: lr %f loss %f' % (counter, lr, np.average(losses)))
-            np.save('predictions', preds)
-            np.save('labels', preds)
+            np.save('results', results)
 
 
 ###############################################################
