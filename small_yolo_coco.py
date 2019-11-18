@@ -49,7 +49,7 @@ def write(text):
 
 ##############################################
 
-loader = LoadCOCO()
+loader = LoadCOCO(batch_size=4)
 weights = np.load('small_yolo_weights.npy', allow_pickle=True).item()
 
 ###############################################################
@@ -150,12 +150,12 @@ conv22 = conv(conv21, (3,3,1024,1024), 2, None, 'conv_22')     # 14
 conv23 = conv(conv22, (3,3,1024,1024), 1, None, 'conv_23')     # 7
 conv24 = conv(conv23, (3,3,1024,1024), 1, None, 'conv_24')     # 7
 
-flat = tf.reshape(conv24, [1, 7*7*1024])
+flat = tf.reshape(conv24, [4, 7*7*1024])
 
 dense1 = tf.nn.relu(dense(flat,   (7*7*1024,   4096), None, 'dense_1'))
 dense2 =            dense(dense1, (    4096, 7*7*90), None, 'dense_2')
 
-out = tf.reshape(dense2, [1, 7, 7, 90])
+out = tf.reshape(dense2, [4, 7, 7, 90])
 
 ###############################################################
 
@@ -253,7 +253,7 @@ while True:
         counter = counter + 1
 
         ################################################
-
+        '''
         TP, TP_FP, TP_FN = mAP(coords, out_np)
 
         TPs.append(TP)
@@ -262,14 +262,12 @@ while True:
 
         precision = np.sum(TPs) / (np.sum(TP_FPs) + 1e-3)
         recall = np.sum(TPs) / (np.sum(TP_FNs) + 1e-3)
-
-        # print ('precision: %f | recall %f' % (precision, recall))
-
+        '''
         ################################################
 
         if (counter % 100 == 0):
-            # draw_boxes('%d.jpg' % (counter), image, out_np, det, iou_np)
-            write("%d: lr %f loss %f precision %f recall %f" % (counter, lr, np.average(losses), precision, recall))
+            # write("%d: lr %f loss %f precision %f recall %f" % (counter, lr, np.average(losses), precision, recall))
+            write("%d: lr %f loss %f" % (counter, lr, np.average(losses)))
 
             '''
             test_vector = {}

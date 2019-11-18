@@ -262,7 +262,7 @@ class LoadCOCO:
         return images, (coords, objs, no_objs, cats)
 
     def empty(self):
-        return self.q.qsize() > self.batch_size
+        return self.q.qsize() < self.batch_size
 
     def full(self):
         return self.q.full()

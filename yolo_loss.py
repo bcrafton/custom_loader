@@ -17,13 +17,13 @@ offset = tf.constant(offset_np, dtype=tf.float32)
 def grid_to_pix(box):
     pix_box_xy = 64. * box[:, :, :, :, 0:2] + offset
     pix_box_wh = 448. * box[:, :, :, :, 2:4]
-    pix_box = tf.concat((pix_box_xy, pix_box_wh), axis=3)
+    pix_box = tf.concat((pix_box_xy, pix_box_wh), axis=4)
     return pix_box
 
 def calc_iou(boxA, boxB, realBox):
     iou1 = calc_iou_help(boxA, realBox)
     iou2 = calc_iou_help(boxB, realBox)
-    return tf.stack([iou1, iou2], 3)
+    return tf.stack([iou1, iou2], axis=4)
 
 def calc_iou_help(boxA, boxB):
     # determine the (x, y)-coordinates of the intersection rectangle
@@ -52,11 +52,13 @@ def calc_iou_help(boxA, boxB):
 
 def yolo_loss(pred, label, obj, no_obj, cat):
 
-    # pred   = [-1, 4, 7, 7, 2 * 5 + 80]
-    # label  = [-1, 4, 7, 7, 5]
-    # obj    = [-1, 4, 7, 7]
-    # no_obj = [-1, 4, 7, 7]
-    # cat    = [-1, 4, 7, 7]
+    # pred   = [4,     7, 7, 90]
+    # label  = [4, -1, 7, 7, 5]
+    # obj    = [4, -1, 7, 7]
+    # no_obj = [4, -1, 7, 7]
+    # cat    = [4, -1, 7, 7]
+
+    pred = tf.reshape(pred, [4, 1, 7, 7, 90])
 
     ######################################
 
@@ -94,15 +96,17 @@ def yolo_loss(pred, label, obj, no_obj, cat):
 
     ######################################
 
-    loss_xy1 = tf.reduce_sum(tf.square(pred_xy1 - label_xy), 3)
-    loss_xy2 = tf.reduce_sum(tf.square(pred_xy2 - label_xy), 3)
+    loss_xy1 = tf.reduce_sum(tf.square(pred_xy1 - label_xy), axis=4)
+    loss_xy2 = tf.reduce_sum(tf.square(pred_xy2 - label_xy), axis=4)
     xy_loss = 5. * obj * tf.where(resp_box, loss_xy1, loss_xy2)
     xy_loss = tf.reduce_mean(tf.reduce_sum(xy_loss, axis=[1, 2]))
 
+    # xy_loss = tf.Print(xy_loss, [tf.shape(loss_xy1), tf.shape(resp_box)], message='', summarize=1000)
+
     ######################################
 
-    loss_wh1 = tf.reduce_sum(tf.square(pred_wh1 - label_wh), 3)
-    loss_wh2 = tf.reduce_sum(tf.square(pred_wh2 - label_wh), 3)
+    loss_wh1 = tf.reduce_sum(tf.square(pred_wh1 - label_wh), axis=4)
+    loss_wh2 = tf.reduce_sum(tf.square(pred_wh2 - label_wh), axis=4)
     wh_loss = 5. * obj * tf.where(resp_box, loss_wh1, loss_wh2)
     wh_loss = tf.reduce_mean(tf.reduce_sum(wh_loss, axis=[1, 2]))
 
