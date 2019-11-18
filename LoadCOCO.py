@@ -174,7 +174,9 @@ def fill_queue(images, det_table, cat_table, q):
 
 class LoadCOCO:
 
-    def __init__(self):
+    def __init__(self, batch_size):
+        self.batch_size = batch_size
+
         self.cat_table = get_cat_table(path + 'train_labels/instances_train2014.json')
 
         self.train_images = sorted(get_images(path + 'train_images'))
@@ -184,11 +186,82 @@ class LoadCOCO:
         thread = threading.Thread(target=fill_queue, args=(self.train_images, self.train_det_table, self.cat_table, self.q))
         thread.start()
 
+    '''
     def pop(self):
         return self.q.get()
 
     def empty(self):
         return self.q.empty()
+
+    def full(self):
+        return self.q.full()
+    '''
+
+    '''
+    def pop(self):
+        assert(not self.empty())
+
+        images = []; coords = []; objs = []; no_objs = []; cats = []
+        for b in range(self.batch_size):
+            image, (coord, obj, no_obj, cat) = loader.pop()
+            images.append(image); coords.append(coord); objs.append(obj); no_objs.append(no_obj); cats.append(cat)
+
+        images = np.concatenate(images, axis=0)
+        coords = np.concatenate(coords, axis=0)
+        objs = np.concatenate(objs, axis=0)
+        no_objs = np.concatenate(no_objs, axis=0)
+        cats = np.concatenate(cats, axis=0)
+
+        return images, (coords, objs, no_objs, cats)
+    '''
+
+    def pop(self):
+        # pred   = [4, -1, 7, 7, 2 * 5 + 80]
+        # coord  = [4, -1, 4, 7, 7, 5]
+        # obj    = [4, -1, 7, 7]
+        # no_obj = [4, -1, 7, 7]
+        # cat    = [4, -1, 7, 7]
+
+        assert(not self.empty())
+
+        ################################
+
+        batch = []; max_ndet = 0
+        for b in range(self.batch_size):
+            image, (coord, obj, no_obj, cat) = loader.pop()
+            ndet = len(coord)
+            max_ndet = max(max_ndet, ndet)
+            batch.append(image, (coord, obj, no_obj, cat))
+
+        ################################
+
+        for b in range(self.batch_size):
+            image, (coord, obj, no_obj, cat) = batch[b]
+            ndet = len(coord)
+            pad = max_ndet - ndet
+            if pad > 0:
+                coord_pad  = np.zeros(shape=(pad, 7, 7, 5)); coord  = np.concatenate((coord, coord_pad), axis=0)
+                obj_pad    = np.zeros(shape=(pad, 7, 7));    obj    = np.concatenate((obj, obj_pad), axis=0)
+                no_obj_pad = np.zeros(shape=(pad, 7, 7));    no_obj = np.concatenate((no_obj, no_obj_pad), axis=0)
+                cat_pad    = np.zeros(shape=(pad, 7, 7));    cat    = np.concatenate((cat, cat_pad), axis=0)
+
+            batch[b] = image, (coord, obj, no_obj, cat)
+
+        ################################
+
+        images = np.concatenate(images, axis=0)
+
+        coords  = np.stack(coords, axis=0)
+        objs    = np.stack(objs, axis=0)
+        no_objs = np.stack(no_objs, axis=0)
+        cats    = np.stack(cats, axis=0)
+
+        ################################
+
+        return images, (coords, objs, no_objs, cats)
+
+    def empty(self):
+        return self.q.qsize() > self.batch_size
 
     def full(self):
         return self.q.full()
