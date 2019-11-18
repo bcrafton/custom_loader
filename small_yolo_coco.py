@@ -110,6 +110,7 @@ coords_ph = tf.placeholder(tf.float32, [4, None, 7, 7, 5])
 obj_ph    = tf.placeholder(tf.float32, [4, None, 7, 7])
 no_obj_ph = tf.placeholder(tf.float32, [4, None, 7, 7])
 cat_ph    = tf.placeholder(tf.int32,   [4, None, 7, 7])
+vld_ph    = tf.placeholder(tf.float32, [4, None, 7, 7])
 
 lr_ph = tf.placeholder(tf.float32, ())
 
@@ -159,7 +160,7 @@ out = tf.reshape(dense2, [4, 7, 7, 90])
 
 ###############################################################
 
-loss = yolo_loss(out, coords_ph, obj_ph, no_obj_ph, cat_ph)
+loss = yolo_loss(out, coords_ph, obj_ph, no_obj_ph, cat_ph, vld_ph)
 train = tf.train.AdamOptimizer(learning_rate=lr_ph, epsilon=args.eps).minimize(loss)
 
 ###############################################################
@@ -236,7 +237,7 @@ def mAP(label, pred, conf_thresh=0.2, iou_thresh=0.3):
 while True:
     if not loader.empty():
         image, det = loader.pop()
-        coords, obj, no_obj, cat = det
+        coords, obj, no_obj, cat, vld = det
 
         if (np.any(coords < 0.) or np.any(coords > 1.1)):
             print (coords)
@@ -244,7 +245,7 @@ while True:
     
         lr = 1e-3 if counter < 50000 else 1e-2
 
-        [out_np, loss_np, _] = sess.run([out, loss, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat, lr_ph: lr})
+        [out_np, loss_np, _] = sess.run([out, loss, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat, vld_ph: vld, lr_ph: lr})
 
         assert(not np.any(np.isnan(image)))
         assert(not np.any(np.isnan(out_np)))

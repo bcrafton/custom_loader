@@ -235,9 +235,10 @@ class LoadCOCO:
 
         ################################
 
-        images = []; coords = []; objs = []; no_objs = []; cats = []
+        images = []; coords = []; objs = []; no_objs = []; cats = []; vlds = []
         for b in range(self.batch_size):
             image, (coord, obj, no_obj, cat) = batch[b]
+            vld = np.ones_like(obj)
             ndet = len(coord)
             pad = max_ndet - ndet
             if pad > 0:
@@ -245,8 +246,9 @@ class LoadCOCO:
                 obj_pad    = np.zeros(shape=(pad, 7, 7));    obj    = np.concatenate((obj, obj_pad), axis=0)
                 no_obj_pad = np.zeros(shape=(pad, 7, 7));    no_obj = np.concatenate((no_obj, no_obj_pad), axis=0)
                 cat_pad    = np.zeros(shape=(pad, 7, 7));    cat    = np.concatenate((cat, cat_pad), axis=0)
+                vld_pad    = np.zeros(shape=(pad, 7, 7));    vld    = np.concatenate((vld, vld_pad), axis=0)
 
-            images.append(image); coords.append(coord); objs.append(obj); no_objs.append(no_obj); cats.append(cat)
+            images.append(image); coords.append(coord); objs.append(obj); no_objs.append(no_obj); cats.append(cat); vlds.append(vld)
 
         ################################
 
@@ -257,9 +259,11 @@ class LoadCOCO:
         no_objs = np.stack(no_objs, axis=0)
         cats    = np.stack(cats, axis=0)
 
+        vlds    = np.stack(cats, axis=0)
+
         ################################
 
-        return images, (coords, objs, no_objs, cats)
+        return images, (coords, objs, no_objs, cats, vlds)
 
     def empty(self):
         return self.q.qsize() < self.batch_size
