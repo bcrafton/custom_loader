@@ -174,12 +174,18 @@ sess.run(tf.global_variables_initializer())
 
 counter = 0
 losses = deque(maxlen=1000)
+
+preds = deque(maxlen=100)
+labels = deque(maxlen=100)
+
+'''
 TPs = deque(maxlen=1000)
 TP_FPs = deque(maxlen=1000)
 TP_FNs = deque(maxlen=1000)
+'''
 
 ###############################################################
-
+'''
 offset = [
 [[0, 0], [0, 64], [0, 128], [0, 192], [0, 256], [0, 320], [0, 384]], 
 [[64, 0], [64, 64], [64, 128], [64, 192], [64, 256], [64, 320], [64, 384]], 
@@ -231,7 +237,7 @@ def mAP(label, pred, conf_thresh=0.2, iou_thresh=0.3):
     TP_FN = np.count_nonzero(pred_conf1 > conf_thresh) + np.count_nonzero(pred_conf2 > conf_thresh)
 
     return TP, TP_FP, TP_FN
-
+'''
 ###############################################################
 
 while True:
@@ -251,6 +257,8 @@ while True:
         assert(not np.any(np.isnan(out_np)))
 
         losses.append(loss_np)
+        preds.append(out_np)
+        labels.append(det)
         counter = counter + 1
 
         ################################################
@@ -266,9 +274,10 @@ while True:
         '''
         ################################################
 
-        if (counter % 100 == 0):
-            # write("%d: lr %f loss %f precision %f recall %f" % (counter, lr, np.average(losses), precision, recall))
-            write("%d: lr %f loss %f" % (counter, lr, np.average(losses)))
+        if (counter % 1000 == 0):
+            write('%d: lr %f loss %f' % (counter, lr, np.average(losses)))
+            np.save('predictions', preds)
+            np.save('labels', preds)
 
             '''
             test_vector = {}
