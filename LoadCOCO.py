@@ -228,13 +228,14 @@ class LoadCOCO:
 
         batch = []; max_ndet = 0
         for b in range(self.batch_size):
-            image, (coord, obj, no_obj, cat) = loader.pop()
+            image, (coord, obj, no_obj, cat) = self.q.get()
             ndet = len(coord)
             max_ndet = max(max_ndet, ndet)
-            batch.append(image, (coord, obj, no_obj, cat))
+            batch.append((image, (coord, obj, no_obj, cat)))
 
         ################################
 
+        images = []; coords = []; objs = []; no_objs = []; cats = []
         for b in range(self.batch_size):
             image, (coord, obj, no_obj, cat) = batch[b]
             ndet = len(coord)
@@ -245,7 +246,7 @@ class LoadCOCO:
                 no_obj_pad = np.zeros(shape=(pad, 7, 7));    no_obj = np.concatenate((no_obj, no_obj_pad), axis=0)
                 cat_pad    = np.zeros(shape=(pad, 7, 7));    cat    = np.concatenate((cat, cat_pad), axis=0)
 
-            batch[b] = image, (coord, obj, no_obj, cat)
+            images.append(image); coords.append(coord); objs.append(obj); no_objs.append(no_obj); cats.append(cat)
 
         ################################
 
