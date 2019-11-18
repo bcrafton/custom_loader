@@ -3,6 +3,9 @@ import numpy as np
 
 ##############################################################
 
+def sigmoid(x):
+  return 1 / (1 + np.exp(-x))
+
 offset = [
 [[0, 0], [0, 64], [0, 128], [0, 192], [0, 256], [0, 320], [0, 384]], 
 [[64, 0], [64, 64], [64, 128], [64, 192], [64, 256], [64, 320], [64, 384]], 
@@ -31,18 +34,18 @@ def grid_to_pix(box):
     box[:, :, :, 2:4] = 448. * box[:, :, :, 2:4]
     return box
 
-def mAP(label, pred, conf_thresh=0.2, iou_thresh=0.3):
+def mAP(label, pred, conf_thresh=0.5, iou_thresh=0.5):
 
     label = np.reshape(grid_to_pix(label[:, :, :, 0:5]), (-1, 7, 7, 5))
     pred1 = np.reshape(grid_to_pix(pred[:, :, :, 0:5]),   (1, 7, 7, 5))
     pred2 = np.reshape(grid_to_pix(pred[:, :, :, 5:10]),  (1, 7, 7, 5))
 
     iou = calc_iou(label, pred1, pred2)
-    resp_box = iou[:, :, :, 0] < iou[:, :, :, 1]
+    resp_box = iou[:, :, :, 0] > iou[:, :, :, 1]
 
     obj = label[:, :, :, 4]
-    pred_conf1 = pred1[:, :, :, 4]
-    pred_conf2 = pred2[:, :, :, 4]
+    pred_conf1 = sigmoid(pred1[:, :, :, 4])
+    pred_conf2 = sigmoid(pred2[:, :, :, 4])
 
     ###############################
 
@@ -50,8 +53,8 @@ def mAP(label, pred, conf_thresh=0.2, iou_thresh=0.3):
     conf_mask = np.where(resp_box, np.ones_like(obj) * pred_conf1, np.ones_like(obj) * pred_conf2) > conf_thresh
 
     TP = np.count_nonzero(iou_mask * conf_mask)
-    TP_FP = np.count_nonzero(obj)
-    TP_FN = np.count_nonzero(pred_conf1 > conf_thresh) + np.count_nonzero(pred_conf2 > conf_thresh)
+    TP_FP = np.count_nonzero(pred_conf1 > conf_thresh) + np.count_nonzero(pred_conf2 > conf_thresh)
+    TP_FN = np.count_nonzero(obj)
 
     return TP, TP_FP, TP_FN
 
@@ -76,12 +79,18 @@ for batch in range(100):
     #############
 
     for ex in range(8):
-        TP, TP_FP, TP_FN = mAP(coords[ex], np.reshape(pred[ex], (1, 7, 7, 90)))
+        l = coords[ex] * np.expand_dims(vlds[ex], axis=3) # apply the vld mask
+        p = np.reshape(pred[ex], (1, 7, 7, 90))
+        TP, TP_FP, TP_FN = mAP(l, p, conf_thresh=0.5, iou_thresh=0.5)
         TPs += TP; TP_FPs += TP_FP; TP_FNs += TP_FN
 
 precision = TPs / (TP_FPs + 1e-3)
 recall = TPs / (TP_FNs + 1e-3)
 
+print ('true positive: %f' % (TPs))
+print ('false positive: %f' % (TP_FPs - TPs))
+print ('false negative: %f' % (TP_FNs - TPs))
+print ()
 print ('precision: %f' % (precision))
 print ('recall: %f' % (recall))
 
