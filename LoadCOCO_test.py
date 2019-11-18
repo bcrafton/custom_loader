@@ -5,37 +5,25 @@ import numpy as np
 
 loader = LoadCOCO()
 
-counter = 0
+batch = []
 while True:
     if not loader.empty():
-        image, (coords, objs, no_objs, cats) = loader.pop()
-        image = np.squeeze(image)
+        image, label = loader.pop()
+        batch.append((image, label))
 
-        image = image / np.max(image)
-        top = image
-        bottom = np.copy(image)
+        if len(batch) == 4:
+            images = []; 
+            coords = []; objs = []; no_objs = []; cats = []
+            for (image, label) in batch:
+                images.append(image)
+                (coord, obj, no_obj, cat) = label
+                coords.append(coord); objs.append(obj); no_objs.append(no_obj); cats.append(cat)
 
-        for ii in range(len(coords)):
-            coord = coords[ii]
-            obj = objs[ii]
-
-            [xc, yc] = np.squeeze(np.where(obj > 0))
-            [x, y, w, h, conf] = coord[xc][yc]
-
-            x = int(x * 64. + xc * 64.)
-            y = int(y * 64. + yc * 64.)
-            w = int(w * 448.)
-            h = int(h * 448.)
-
-            [x11, x12, x21, x22] = [x, x+5, x+w-5, x+w]
-            [y11, y12, y21, y22] = [y, y+5, y+h-5, y+h]
-            red = np.array([1.0, 0.0, 0.0])
-            bottom[x11:x12, y12:y21, :] = red
-            bottom[x21:x22, y12:y21, :] = red
-            bottom[x12:x21, y11:y12, :] = red
-            bottom[x12:x21, y21:y22, :] = red
-
-        concat = np.concatenate((top, bottom), axis=1)
-        plt.imsave('%d.jpg' % (counter), concat)
-        print (counter)
-        counter = counter + 1
+            images = np.concatenate(images, axis=0)
+            coords = np.concatenate(coords, axis=0)
+            objs = np.concatenate(objs, axis=0)
+            no_objs = np.concatenate(no_objs, axis=0)
+            cats = np.concatenate(cats, axis=0)
+            print (np.shape(images))
+            print (np.shape(objs))
+            assert (False)
