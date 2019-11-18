@@ -217,8 +217,8 @@ while True:
         cats.append(cat)
         vlds.append(vld)
         '''
-        results['pred%d' % (counter)] = pred
-        results['label%d' % (counter)] = det
+        results['pred%d' % (counter % 100)] = out_np
+        results['label%d' % (counter % 100)] = det
 
         counter = counter + 1
 
