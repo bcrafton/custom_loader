@@ -15,8 +15,8 @@ offset_np = [
 offset = tf.constant(offset_np, dtype=tf.float32)
 
 def grid_to_pix(box):
-    pix_box_xy = 64. * box[:, :, :, 0:2] + offset
-    pix_box_wh = 448. * box[:, :, :, 2:4]
+    pix_box_xy = 64. * box[:, :, :, :, 0:2] + offset
+    pix_box_wh = 448. * box[:, :, :, :, 2:4]
     pix_box = tf.concat((pix_box_xy, pix_box_wh), axis=3)
     return pix_box
 
@@ -27,11 +27,11 @@ def calc_iou(boxA, boxB, realBox):
 
 def calc_iou_help(boxA, boxB):
     # determine the (x, y)-coordinates of the intersection rectangle
-    xA = tf.maximum(boxA[:,:,:,0], boxB[:,:,:,0])
-    xB = tf.minimum(boxA[:,:,:,0] + boxA[:,:,:,2], boxB[:,:,:,0] + boxB[:,:,:,2])
+    xA = tf.maximum(boxA[:,:,:,:,0], boxB[:,:,:,:,0])
+    xB = tf.minimum(boxA[:,:,:,:,0] + boxA[:,:,:,:,2], boxB[:,:,:,:,0] + boxB[:,:,:,:,2])
 
-    yA = tf.maximum(boxA[:,:,:,1], boxB[:,:,:,1])
-    yB = tf.minimum(boxA[:,:,:,1] + boxA[:,:,:,3], boxB[:,:,:,1] + boxB[:,:,:,3])
+    yA = tf.maximum(boxA[:,:,:,:,1], boxB[:,:,:,:,1])
+    yB = tf.minimum(boxA[:,:,:,:,1] + boxA[:,:,:,:,3], boxB[:,:,:,:,1] + boxB[:,:,:,:,3])
 
     # compute the area of intersection rectangle
     ix = xB - xA
@@ -39,8 +39,8 @@ def calc_iou_help(boxA, boxB):
     interArea = tf.maximum(tf.zeros_like(ix), ix) * tf.maximum(tf.zeros_like(iy), iy)
 
     # compute the area of both the prediction and ground-truth rectangles
-    boxAArea = tf.abs(boxA[:,:,:,2] * boxA[:,:,:,3])
-    boxBArea = tf.abs(boxB[:,:,:,2] * boxB[:,:,:,3])
+    boxAArea = tf.abs(boxA[:,:,:,:,2] * boxA[:,:,:,:,3])
+    boxBArea = tf.abs(boxB[:,:,:,:,2] * boxB[:,:,:,:,3])
 
     # compute the intersection over union by taking the intersection
     # area and dividing it by the sum of prediction + ground-truth
@@ -52,84 +52,46 @@ def calc_iou_help(boxA, boxB):
 
 def yolo_loss(pred, label, obj, no_obj, cat):
 
-    # pred   = [-1, 7, 7, 2 * 5 + 80]
-    # label  = [-1, 7, 7, 5]
-    # obj    = [-1, 7, 7]
-    # no_obj = [-1, 7, 7]
-    # cat    = [-1, 7, 7]
+    # pred   = [-1, 4, 7, 7, 2 * 5 + 80]
+    # label  = [-1, 4, 7, 7, 5]
+    # obj    = [-1, 4, 7, 7]
+    # no_obj = [-1, 4, 7, 7]
+    # cat    = [-1, 4, 7, 7]
 
     ######################################
 
-    label_box = grid_to_pix(label[:, :, :, 0:4])
-
-    # TODO
-    # is it right to use relu here ?
-    # think it could definitely reward bad x,y behavior
-    # yeah it means we have to relu the xy when we go to draw the box.
-    # pred_box1 = grid_to_pix(tf.nn.relu(pred[:, :, :, 0:4]))
-    # pred_box2 = grid_to_pix(tf.nn.relu(pred[:, :, :, 5:9]))
-
-    pred_box1 = grid_to_pix(pred[:, :, :, 0:4])
-    pred_box2 = grid_to_pix(pred[:, :, :, 5:9])
-
-    # are we supposed to be using the grid_to_pix boxes for training ? 
-    # then why did we convert them in the first place ? 
-    # shouldnt have to convert them back tho, just throw both in the dictionary. 
+    label_box = grid_to_pix(label[:, :, :, :, 0:4])
+    pred_box1 = grid_to_pix(pred[:, :, :, :, 0:4])
+    pred_box2 = grid_to_pix(pred[:, :, :, :, 5:9])
 
     ############################
 
-    label_xy = label[:, :, :, 0:2]
-    pred_xy1 = pred[:, :, :, 0:2]
-    pred_xy2 = pred[:, :, :, 5:7]
+    label_xy = label[:, :, :, :, 0:2]
+    pred_xy1 = pred[:, :, :, :, 0:2]
+    pred_xy2 = pred[:, :, :, :, 5:7]
 
     ############################
 
-    label_wh = tf.sqrt(label[:, :, :, 2:4])
-    pred_wh1 = tf.sqrt(tf.abs(pred[:, :, :, 2:4])) * tf.sign(pred[:, :, :, 2:4])
-    pred_wh2 = tf.sqrt(tf.abs(pred[:, :, :, 7:9])) * tf.sign(pred[:, :, :, 7:9])
-
-    # TODO
-    # we dont have to be perfect, just trying to make things work.
-    # label_wh = label[:, :, :, 2:4]
-    # pred_wh1 = pred[:, :, :, 2:4]
-    # pred_wh2 = pred[:, :, :, 7:9]
+    label_wh = tf.sqrt(label[:, :, :, :, 2:4])
+    pred_wh1 = tf.sqrt(tf.abs(pred[:, :, :, :, 2:4])) * tf.sign(pred[:, :, :, :, 2:4])
+    pred_wh2 = tf.sqrt(tf.abs(pred[:, :, :, :, 7:9])) * tf.sign(pred[:, :, :, :, 7:9])
 
     ############################
 
-    label_conf = label[:, :, :, 4]
-    pred_conf1 = pred[:, :, :, 4]
-    pred_conf2 = pred[:, :, :, 9]
+    label_conf = label[:, :, :, :, 4]
+    pred_conf1 = pred[:, :, :, :, 4]
+    pred_conf2 = pred[:, :, :, :, 9]
 
     ############################
-
+    '''
     label_cat = tf.one_hot(cat, depth=80)
-    pred_cat = pred[:, :, :, 10:90]
-    
+    pred_cat = pred[:, :, :, :, 10:90]
+    '''
     ############################
 
     iou = calc_iou(pred_box1, pred_box2, label_box)
-    resp_box = tf.greater(iou[:, :, :, 0], iou[:, :, :, 1])
+    resp_box = tf.greater(iou[:, :, :, :, 0], iou[:, :, :, :, 1])
 
-    ######################################
-    '''
-    iou_threshold = 0.3 * tf.ones_like(obj)
-    conf_threshold = 0.5 * tf.ones_like(pred_conf1)
-
-    # we never actually use conf_mask, what was this for ? 
-    # this was to artificaly boost accuracy I think ... for precision only look at obj.
-    # conf_mask = tf.cast(tf.greater(tf.where(resp_box, tf.ones_like(obj) * pred_conf1, tf.ones_like(obj) * pred_conf2), threshold), tf.float32)
-
-    iou_mask = tf.greater(obj * tf.reduce_max(iou, axis=3), iou_threshold)
-    conf_mask = tf.greater(tf.where(resp_box, tf.ones_like(obj) * pred_conf1, tf.ones_like(obj) * pred_conf2), conf_threshold)
-
-    TP = tf.count_nonzero(tf.logical_and(iou_mask, conf_mask))
-    TP_FN = tf.count_nonzero(obj)
-    TP_FP = tf.count_nonzero(tf.greater(pred_conf1, conf_threshold)) + tf.count_nonzero(tf.greater(pred_conf2, conf_threshold))
-
-    # these should definitely be done in numpy ...
-    precision = tf.cast(TP, tf.float32) / (tf.cast(TP_FP, tf.float32) + 1e-3)
-    recall = tf.cast(TP, tf.float32) / (tf.cast(TP_FN, tf.float32) + 1e-3)
-    '''
     ######################################
 
     loss_xy1 = tf.reduce_sum(tf.square(pred_xy1 - label_xy), 3)
@@ -159,15 +121,14 @@ def yolo_loss(pred, label, obj, no_obj, cat):
     no_obj_loss = tf.reduce_mean(tf.reduce_sum(no_obj_loss, axis=[1, 2]))
 
     ######################################
-
+    '''
     pred_cat = tf.reshape(obj, [-1,7,7,1]) * pred_cat
     cat_loss = tf.reduce_mean(tf.square(pred_cat - label_cat), axis=3)
     cat_loss = tf.reduce_mean(tf.reduce_sum(cat_loss, axis=[1, 2]))
-
+    '''
     ######################################
 
-    loss = xy_loss + wh_loss + obj_loss + no_obj_loss + cat_loss
-    # loss = tf.Print(loss, [xy_loss, wh_loss, obj_loss, no_obj_loss], message='', summarize=1000)
+    loss = xy_loss + wh_loss + obj_loss + no_obj_loss # + cat_loss
 
     return loss
 

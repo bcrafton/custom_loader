@@ -105,11 +105,11 @@ def dense(x, size, w, name):
 
 ###############################################################
 
-image_ph  = tf.placeholder(tf.float32, [1, 448, 448, 3])
-coords_ph = tf.placeholder(tf.float32, [None, 7, 7, 5])
-obj_ph    = tf.placeholder(tf.float32, [None, 7, 7])
-no_obj_ph = tf.placeholder(tf.float32, [None, 7, 7])
-cat_ph    = tf.placeholder(tf.int32,   [None, 7, 7])
+image_ph  = tf.placeholder(tf.float32, [4, 448, 448, 3])
+coords_ph = tf.placeholder(tf.float32, [4, None, 7, 7, 5])
+obj_ph    = tf.placeholder(tf.float32, [4, None, 7, 7])
+no_obj_ph = tf.placeholder(tf.float32, [4, None, 7, 7])
+cat_ph    = tf.placeholder(tf.int32,   [4, None, 7, 7])
 
 lr_ph = tf.placeholder(tf.float32, ())
 
