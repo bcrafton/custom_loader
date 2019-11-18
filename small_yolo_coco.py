@@ -26,6 +26,7 @@ import tensorflow as tf
 import numpy as np
 np.set_printoptions(threshold=10000)
 import cv2
+import time
 
 from bc_utils.conv_utils import conv_output_length
 from bc_utils.conv_utils import conv_input_length
@@ -188,6 +189,7 @@ vlds = deque(maxlen=100)
 
 ###############################################################
 
+start = time.time()
 while True:
     if not loader.empty():
         image, det = loader.pop()
@@ -200,7 +202,7 @@ while True:
             assert(not (np.any(coord < 0.) or np.any(coord > 1.1)))
         '''    
 
-        lr = 1e-3 if counter < 50000 else 1e-2
+        lr = 1e-4 if counter < 5000 else 1e-3
 
         [out_np, loss_np, _] = sess.run([out, loss, train], feed_dict={image_ph: image, coord_ph: coord, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat, vld_ph: vld, lr_ph: lr})
 
@@ -208,24 +210,15 @@ while True:
         assert(not np.any(np.isnan(out_np)))
 
         losses.append(loss_np)
-
-        '''
-        preds.append(out_np)
-        coords.append(coord)
-        objs.append(obj)
-        no_objs.append(no_obj)
-        cats.append(cat)
-        vlds.append(vld)
-        '''
         results['pred%d' % (counter % 100)] = out_np
         results['label%d' % (counter % 100)] = det
-
         counter = counter + 1
 
         ################################################
 
         if (counter % 100 == 0):
-            write('%d: lr %f loss %f' % (counter, lr, np.average(losses)))
+            img_per_sec = (args.batch_size * counter) / (time.time() - start)
+            write('%d: loss %f | lr %f | img/s: %f' % (args.batch_size * counter, np.average(losses), lr, img_per_sec))
             np.save('results', results)
 
 

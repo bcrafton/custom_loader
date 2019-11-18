@@ -81,8 +81,8 @@ def yolo_loss(pred, label, obj, no_obj, cat, vld):
     ############################
 
     label_conf = label[:, :, :, :, 4]
-    pred_conf1 = pred[:, :, :, :, 4]
-    pred_conf2 = pred[:, :, :, :, 9]
+    pred_conf1 = tf.sigmoid(pred[:, :, :, :, 4])
+    pred_conf2 = tf.sigmoid(pred[:, :, :, :, 9])
 
     ############################
     '''
