@@ -8,7 +8,7 @@ import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--epochs', type=int, default=10)
-parser.add_argument('--batch_size', type=int, default=32)
+parser.add_argument('--batch_size', type=int, default=8)
 parser.add_argument('--lr', type=float, default=1e-3)
 parser.add_argument('--eps', type=float, default=1.)
 parser.add_argument('--gpu', type=int, default=0)
@@ -49,7 +49,7 @@ def write(text):
 
 ##############################################
 
-loader = LoadCOCO(batch_size=4)
+loader = LoadCOCO(batch_size=args.batch_size)
 weights = np.load('small_yolo_weights.npy', allow_pickle=True).item()
 
 ###############################################################
@@ -105,12 +105,12 @@ def dense(x, size, w, name):
 
 ###############################################################
 
-image_ph  = tf.placeholder(tf.float32, [4, 448, 448, 3])
-coords_ph = tf.placeholder(tf.float32, [4, None, 7, 7, 5])
-obj_ph    = tf.placeholder(tf.float32, [4, None, 7, 7])
-no_obj_ph = tf.placeholder(tf.float32, [4, None, 7, 7])
-cat_ph    = tf.placeholder(tf.int32,   [4, None, 7, 7])
-vld_ph    = tf.placeholder(tf.float32, [4, None, 7, 7])
+image_ph  = tf.placeholder(tf.float32, [args.batch_size, 448, 448, 3])
+coords_ph = tf.placeholder(tf.float32, [args.batch_size, None, 7, 7, 5])
+obj_ph    = tf.placeholder(tf.float32, [args.batch_size, None, 7, 7])
+no_obj_ph = tf.placeholder(tf.float32, [args.batch_size, None, 7, 7])
+cat_ph    = tf.placeholder(tf.int32,   [args.batch_size, None, 7, 7])
+vld_ph    = tf.placeholder(tf.float32, [args.batch_size, None, 7, 7])
 
 lr_ph = tf.placeholder(tf.float32, ())
 
@@ -151,12 +151,12 @@ conv22 = conv(conv21, (3,3,1024,1024), 2, None, 'conv_22')     # 14
 conv23 = conv(conv22, (3,3,1024,1024), 1, None, 'conv_23')     # 7
 conv24 = conv(conv23, (3,3,1024,1024), 1, None, 'conv_24')     # 7
 
-flat = tf.reshape(conv24, [4, 7*7*1024])
+flat = tf.reshape(conv24, [args.batch_size, 7*7*1024])
 
 dense1 = tf.nn.relu(dense(flat,   (7*7*1024,   4096), None, 'dense_1'))
 dense2 =            dense(dense1, (    4096, 7*7*90), None, 'dense_2')
 
-out = tf.reshape(dense2, [4, 7, 7, 90])
+out = tf.reshape(dense2, [args.batch_size, 7, 7, 90])
 
 ###############################################################
 

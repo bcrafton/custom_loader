@@ -58,7 +58,7 @@ def yolo_loss(pred, label, obj, no_obj, cat, vld):
     # no_obj = [4, -1, 7, 7]
     # cat    = [4, -1, 7, 7]
 
-    pred = tf.reshape(pred, [4, 1, 7, 7, 90])
+    pred = tf.reshape(pred, [8, 1, 7, 7, 90])
 
     ######################################
 
@@ -99,7 +99,7 @@ def yolo_loss(pred, label, obj, no_obj, cat, vld):
     loss_xy1 = tf.reduce_sum(tf.square(pred_xy1 - label_xy), axis=4)
     loss_xy2 = tf.reduce_sum(tf.square(pred_xy2 - label_xy), axis=4)
     xy_loss = 5. * obj * vld * tf.where(resp_box, loss_xy1, loss_xy2)
-    xy_loss = tf.reduce_mean(tf.reduce_sum(xy_loss, axis=[1, 2]))
+    xy_loss = tf.reduce_mean(tf.reduce_sum(xy_loss, axis=[2, 3]))
 
     # xy_loss = tf.Print(xy_loss, [tf.shape(loss_xy1), tf.shape(resp_box)], message='', summarize=1000)
 
@@ -108,21 +108,21 @@ def yolo_loss(pred, label, obj, no_obj, cat, vld):
     loss_wh1 = tf.reduce_sum(tf.square(pred_wh1 - label_wh), axis=4)
     loss_wh2 = tf.reduce_sum(tf.square(pred_wh2 - label_wh), axis=4)
     wh_loss = 5. * obj * vld * tf.where(resp_box, loss_wh1, loss_wh2)
-    wh_loss = tf.reduce_mean(tf.reduce_sum(wh_loss, axis=[1, 2]))
+    wh_loss = tf.reduce_mean(tf.reduce_sum(wh_loss, axis=[2, 3]))
 
     ######################################
 
     loss_obj1 = tf.square(pred_conf1 - label_conf)
     loss_obj2 = tf.square(pred_conf2 - label_conf)
     obj_loss = 1. * obj * vld * tf.where(resp_box, loss_obj1, loss_obj2)
-    obj_loss = tf.reduce_mean(tf.reduce_sum(obj_loss, axis=[1, 2]))
+    obj_loss = tf.reduce_mean(tf.reduce_sum(obj_loss, axis=[2, 3]))
 
     ######################################    
 
     loss_no_obj1 = tf.square(pred_conf1 - label_conf)
     loss_no_obj2 = tf.square(pred_conf2 - label_conf)
     no_obj_loss = 0.5 * no_obj * vld * tf.where(resp_box, loss_no_obj1, loss_no_obj2)
-    no_obj_loss = tf.reduce_mean(tf.reduce_sum(no_obj_loss, axis=[1, 2]))
+    no_obj_loss = tf.reduce_mean(tf.reduce_sum(no_obj_loss, axis=[2, 3]))
 
     ######################################
     '''
