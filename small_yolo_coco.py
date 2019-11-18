@@ -160,7 +160,7 @@ out = tf.reshape(dense3, [1, 7, 7, 90])
 
 ###############################################################
 
-loss, precision, recall, iou = yolo_loss(out, coords_ph, obj_ph, no_obj_ph, cat_ph)
+loss = yolo_loss(out, coords_ph, obj_ph, no_obj_ph, cat_ph)
 train = tf.train.AdamOptimizer(learning_rate=lr_ph, epsilon=args.eps).minimize(loss)
 
 ###############################################################
@@ -173,9 +173,33 @@ sess.run(tf.global_variables_initializer())
 ###############################################################
 
 counter = 0
-losses = deque(maxlen=1000)
-precisions = deque(maxlen=1000)
-recalls = deque(maxlen=1000)
+TPs = deque(maxlen=1000)
+TP_FPs = deque(maxlen=1000)
+TP_FNs = deque(maxlen=1000)
+
+###############################################################
+
+def mAP(label, pred, conf_thresh=0.5, iou_thresh=0.3):
+
+    label = np.reshape(grid_to_pix(label[:, :, :, 0:5]), (-1, 7, 7, 5))
+    pred1 = np.reshape(grid_to_pix(pred[:, :, :, 0:5]),   (1, 7, 7, 5))
+    pred2 = np.reshape(grid_to_pix(pred[:, :, :, 5:10]),  (1, 7, 7, 5))
+
+    iou = calc_iou(label, pred1, pred2)
+    resp_box = iou[:, :, :, 0] < iou[:, :, :, 1]
+
+    obj = label[:, :, :, 4]
+    pred_conf1 = pred1[:, :, :, 4]
+    pred_conf2 = pred2[:, :, :, 4]
+
+    iou_mask = obj * np.max(iou, axis=3) > iou_thresh
+    conf_mask = np.where(resp_box, np.ones_like(obj) * pred_conf1, np.ones_like(obj) * pred_conf2) < conf_thresh
+
+    TP = np.count_nonzero(iou_mask * conf_mask)
+    TP_FP = np.count_nonzero(obj)
+    TP_FN = np.count_nonzero(pred_conf1 > conf_thresh) + np.count_nonzero(pred_conf2 > conf_thresh)
+
+    return TP, TP_FN, TP_FP
 
 ###############################################################
 
@@ -190,21 +214,21 @@ while True:
     
         lr = 1e-3 if counter < 50000 else 1e-2
 
-        [out_np, iou_np, loss_np, precision_np, recall_np, _] = sess.run([out, iou, loss, precision, recall, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat, lr_ph: lr})
+        [out_np, loss_np, _] = sess.run([out, loss, train], feed_dict={image_ph: image, coords_ph: coords, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat, lr_ph: lr})
 
         assert(not np.any(np.isnan(image)))
         assert(not np.any(np.isnan(out_np)))
-        assert(not np.any(np.isnan(iou_np)))
 
         losses.append(loss_np)
-        precisions.append(precision_np)
-        recalls.append(recall_np)
         counter = counter + 1
+
+        TP, TP_FP, TP_FN = mAP(coords, out_np)
 
         if (counter % 100 == 0):
             draw_boxes('%d.jpg' % (counter), image, out_np, det, iou_np)
             write("%d: lr %f loss %f precision %f recall %f" % (counter, lr, np.average(losses), np.average(precisions), np.average(recalls)))
 
+            '''
             test_vector = {}
             test_vector['image'] = image
             test_vector['predict'] = out_np
@@ -214,7 +238,7 @@ while True:
             test_vector['cat'] = cat
             test_vector['iou'] = iou_np
             np.save('test_vector_' + str(counter), test_vector)
-            
+            '''
 
 ###############################################################
 

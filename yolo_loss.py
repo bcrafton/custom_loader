@@ -169,7 +169,7 @@ def yolo_loss(pred, label, obj, no_obj, cat):
     loss = xy_loss + wh_loss + obj_loss + no_obj_loss + cat_loss
     # loss = tf.Print(loss, [xy_loss, wh_loss, obj_loss, no_obj_loss], message='', summarize=1000)
 
-    return loss, precision, recall, iou
+    return loss
 
 
 
