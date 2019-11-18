@@ -173,13 +173,42 @@ sess.run(tf.global_variables_initializer())
 ###############################################################
 
 counter = 0
+losses = deque(maxlen=1000)
 TPs = deque(maxlen=1000)
 TP_FPs = deque(maxlen=1000)
 TP_FNs = deque(maxlen=1000)
 
 ###############################################################
 
-def mAP(label, pred, conf_thresh=0.5, iou_thresh=0.3):
+offset = [
+[[0, 0], [0, 64], [0, 128], [0, 192], [0, 256], [0, 320], [0, 384]], 
+[[64, 0], [64, 64], [64, 128], [64, 192], [64, 256], [64, 320], [64, 384]], 
+[[128, 0], [128, 64], [128, 128], [128, 192], [128, 256], [128, 320], [128, 384]], 
+[[192, 0], [192, 64], [192, 128], [192, 192], [192, 256], [192, 320], [192, 384]], 
+[[256, 0], [256, 64], [256, 128], [256, 192], [256, 256], [256, 320], [256, 384]],  
+[[320, 0], [320, 64], [320, 128], [320, 192], [320, 256], [320, 320], [320, 384]],  
+[[384, 0], [384, 64], [384, 128], [384, 192], [384, 256], [384, 320], [384, 384]]
+]
+
+def calc_iou(label, pred1, pred2):
+    iou1 = calc_iou_help(label, pred1)
+    iou2 = calc_iou_help(label, pred2)
+    return np.stack([iou1, iou2], 3)
+
+def calc_iou_help(boxA, boxB):
+    intersectionX = np.minimum(boxA[:, :, :, 0] + boxA[:, :, :, 2], boxB[:, :, :, 0] + boxB[:, :, :, 2]) - np.maximum(boxA[:, :, :, 0], boxB[:, :, :, 0])
+    intersectionY = np.minimum(boxA[:, :, :, 1] + boxA[:, :, :, 3], boxB[:, :, :, 1] + boxB[:, :, :, 3]) - np.maximum(boxA[:, :, :, 1], boxB[:, :, :, 1])
+    intersection = np.maximum(0., intersectionX) * np.maximum(0., intersectionY)
+    union = (boxA[:, :, :, 2] * boxA[:, :, :, 3]) + (boxB[:, :, :, 2] * boxB[:, :, :, 3]) - intersection
+    iou = intersection / union
+    return iou
+
+def grid_to_pix(box):
+    box[:, :, :, 0:2] = 64.  * box[:, :, :, 0:2] + offset
+    box[:, :, :, 2:4] = 448. * box[:, :, :, 2:4]
+    return box
+
+def mAP(label, pred, conf_thresh=0.2, iou_thresh=0.3):
 
     label = np.reshape(grid_to_pix(label[:, :, :, 0:5]), (-1, 7, 7, 5))
     pred1 = np.reshape(grid_to_pix(pred[:, :, :, 0:5]),   (1, 7, 7, 5))
@@ -192,14 +221,16 @@ def mAP(label, pred, conf_thresh=0.5, iou_thresh=0.3):
     pred_conf1 = pred1[:, :, :, 4]
     pred_conf2 = pred2[:, :, :, 4]
 
+    ###############################
+
     iou_mask = obj * np.max(iou, axis=3) > iou_thresh
-    conf_mask = np.where(resp_box, np.ones_like(obj) * pred_conf1, np.ones_like(obj) * pred_conf2) < conf_thresh
+    conf_mask = np.where(resp_box, np.ones_like(obj) * pred_conf1, np.ones_like(obj) * pred_conf2) > conf_thresh
 
     TP = np.count_nonzero(iou_mask * conf_mask)
     TP_FP = np.count_nonzero(obj)
     TP_FN = np.count_nonzero(pred_conf1 > conf_thresh) + np.count_nonzero(pred_conf2 > conf_thresh)
 
-    return TP, TP_FN, TP_FP
+    return TP, TP_FP, TP_FN
 
 ###############################################################
 
@@ -222,11 +253,24 @@ while True:
         losses.append(loss_np)
         counter = counter + 1
 
+        ################################################
+
         TP, TP_FP, TP_FN = mAP(coords, out_np)
 
+        TPs.append(TP)
+        TP_FPs.append(TP_FP)
+        TP_FNs.append(TP_FN)
+
+        precision = np.sum(TPs) / (np.sum(TP_FPs) + 1e-3)
+        recall = np.sum(TPs) / (np.sum(TP_FNs) + 1e-3)
+
+        # print ('precision: %f | recall %f' % (precision, recall))
+
+        ################################################
+
         if (counter % 100 == 0):
-            draw_boxes('%d.jpg' % (counter), image, out_np, det, iou_np)
-            write("%d: lr %f loss %f precision %f recall %f" % (counter, lr, np.average(losses), np.average(precisions), np.average(recalls)))
+            # draw_boxes('%d.jpg' % (counter), image, out_np, det, iou_np)
+            write("%d: lr %f loss %f precision %f recall %f" % (counter, lr, np.average(losses), precision, recall))
 
             '''
             test_vector = {}

@@ -111,7 +111,7 @@ def yolo_loss(pred, label, obj, no_obj, cat):
     resp_box = tf.greater(iou[:, :, :, 0], iou[:, :, :, 1])
 
     ######################################
-
+    '''
     iou_threshold = 0.3 * tf.ones_like(obj)
     conf_threshold = 0.5 * tf.ones_like(pred_conf1)
 
@@ -129,7 +129,7 @@ def yolo_loss(pred, label, obj, no_obj, cat):
     # these should definitely be done in numpy ...
     precision = tf.cast(TP, tf.float32) / (tf.cast(TP_FP, tf.float32) + 1e-3)
     recall = tf.cast(TP, tf.float32) / (tf.cast(TP_FN, tf.float32) + 1e-3)
-
+    '''
     ######################################
 
     loss_xy1 = tf.reduce_sum(tf.square(pred_xy1 - label_xy), 3)
