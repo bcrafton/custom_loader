@@ -124,6 +124,11 @@ def yolo_loss(pred, label, obj, no_obj, cat, vld):
     no_obj_loss = 0.5 * no_obj * vld * tf.where(resp_box, loss_no_obj1, loss_no_obj2)
     no_obj_loss = tf.reduce_mean(tf.reduce_sum(no_obj_loss, axis=[2, 3]))
 
+    # xy_loss = tf.Print(xy_loss, [tf.shape(pred_conf1), tf.shape(label_conf), tf.count_nonzero(loss_no_obj1), tf.count_nonzero(no_obj)], message='', summarize=1000)
+    # xy_loss = tf.Print(xy_loss, [tf.shape(vld), tf.shape(no_obj), tf.reduce_sum(loss_no_obj1), tf.reduce_sum(loss_no_obj2)], message='', summarize=1000)
+    # xy_loss = tf.Print(xy_loss, [tf.count_nonzero(vld), tf.count_nonzero(vld * no_obj), tf.reduce_sum(vld * loss_no_obj1), tf.reduce_sum(vld * loss_no_obj2)], message='', summarize=1000)
+    # xy_loss = tf.Print(xy_loss, [tf.count_nonzero(vld), tf.count_nonzero(vld * no_obj), tf.count_nonzero(obj), tf.count_nonzero(obj * vld)], message='', summarize=1000)
+
     ######################################
     '''
     pred_cat = tf.reshape(obj, [-1,7,7,1]) * pred_cat
