@@ -193,6 +193,12 @@ vlds = deque(maxlen=100)
 
 ###############################################################
 
+examples = 80000 
+epochs = 30
+lr_slope = 1e-2 / (args.batch_size * examples * epochs)
+
+###############################################################
+
 start = time.time()
 while True:
     if not loader.empty():
@@ -206,7 +212,7 @@ while True:
             assert(not (np.any(coord < 0.) or np.any(coord > 1.1)))
         '''    
 
-        lr = 1e-3 if counter < 50000 else 1e-4
+        lr = np.clip(lr_slope * args.batch_size * counter, 1e-3, 1e-2)
 
         feed_dict = feed_dict={image_ph: image, coord_ph: coord, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat, vld_ph: vld, lr_ph: lr}
         [out_np, xy_loss_np, wh_loss_np, obj_loss_np, no_obj_loss_np, _] = sess.run([out, xy_loss, wh_loss, obj_loss, no_obj_loss, train], feed_dict=feed_dict)
