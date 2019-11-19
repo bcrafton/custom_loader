@@ -161,8 +161,8 @@ out = tf.reshape(dense2, [args.batch_size, 7, 7, 90])
 
 ###############################################################
 
-xy_loss, wh_loss, obj_loss, no_obj_loss = yolo_loss(out, coord_ph, obj_ph, no_obj_ph, cat_ph, vld_ph)
-loss = xy_loss + wh_loss + obj_loss + no_obj_loss
+xy_loss, wh_loss, obj_loss, no_obj_loss, cat_loss = yolo_loss(out, coord_ph, obj_ph, no_obj_ph, cat_ph, vld_ph)
+loss = xy_loss + wh_loss + obj_loss + no_obj_loss + cat_loss
 train = tf.train.AdamOptimizer(learning_rate=lr_ph, epsilon=args.eps).minimize(loss)
 
 ###############################################################
@@ -179,17 +179,9 @@ xy_losses = deque(maxlen=1000)
 wh_losses = deque(maxlen=1000)
 obj_losses = deque(maxlen=1000)
 no_obj_losses = deque(maxlen=1000)
+cat_losses = deque(maxlen=1000)
 
 results = {}
-
-'''
-preds = deque(maxlen=100)
-coords = deque(maxlen=100)
-objs = deque(maxlen=100)
-no_objs = deque(maxlen=100)
-cats = deque(maxlen=100)
-vlds = deque(maxlen=100)
-'''
 
 ###############################################################
 
@@ -215,7 +207,7 @@ while True:
         lr = np.clip(lr_slope * batch, 1e-3, 1e-2)
 
         feed_dict = feed_dict={image_ph: image, coord_ph: coord, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat, vld_ph: vld, lr_ph: lr}
-        [out_np, xy_loss_np, wh_loss_np, obj_loss_np, no_obj_loss_np, _] = sess.run([out, xy_loss, wh_loss, obj_loss, no_obj_loss, train], feed_dict=feed_dict)
+        [out_np, xy_loss_np, wh_loss_np, obj_loss_np, no_obj_loss_np, cat_loss_np, _] = sess.run([out, xy_loss, wh_loss, obj_loss, no_obj_loss, cat_loss, train], feed_dict=feed_dict)
 
         assert(not np.any(np.isnan(image)))
         assert(not np.any(np.isnan(out_np)))
@@ -224,6 +216,7 @@ while True:
         wh_losses.append(wh_loss_np)
         obj_losses.append(obj_loss_np)
         no_obj_losses.append(no_obj_loss_np)        
+        cat_losses.append(cat_loss_np)
 
         results['img%d' % (batch % 100)] = image
         results['pred%d' % (batch % 100)] = out_np
@@ -234,8 +227,8 @@ while True:
 
         if (batch % 100 == 0):
             img_per_sec = (args.batch_size * batch) / (time.time() - start)
-            write_args = (args.batch_size * batch, np.average(xy_losses), np.average(wh_losses), np.average(obj_losses), np.average(no_obj_losses), lr, img_per_sec)
-            write('%d: xy loss %f | wh loss %f | obj loss %f | no obj loss %f | lr %f | img/s: %f' % write_args)
+            write_args = (args.batch_size * batch, np.average(xy_losses), np.average(wh_losses), np.average(obj_losses), np.average(no_obj_losses), np.average(cat_losses), lr, img_per_sec)
+            write('%d: xy loss %f | wh loss %f | obj loss %f | no obj loss %f | cat loss %f | lr %f | img/s: %f' % write_args)
             np.save('results', results)
 
 
