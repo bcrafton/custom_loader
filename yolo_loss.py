@@ -132,9 +132,7 @@ def yolo_loss(pred, label, obj, no_obj, cat, vld):
     '''
     ######################################
 
-    loss = xy_loss + wh_loss + obj_loss + no_obj_loss # + cat_loss
-
-    return loss
+    return xy_loss, wh_loss, obj_loss, no_obj_loss
 
 
 
