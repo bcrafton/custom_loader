@@ -228,8 +228,8 @@ while True:
 
         if (counter % 100 == 0):
             img_per_sec = (args.batch_size * counter) / (time.time() - start)
-            args = (args.batch_size * counter, np.average(xy_losses), np.average(wh_losses), np.average(obj_losses), np.average(no_obj_losses), lr, img_per_sec)
-            write('%d: xy loss %f | wh loss %f | obj loss %f | no obj loss %f | xy loss %f | lr %f | img/s: %f' % args)
+            write_args = (args.batch_size * counter, np.average(xy_losses), np.average(wh_losses), np.average(obj_losses), np.average(no_obj_losses), lr, img_per_sec)
+            write('%d: xy loss %f | wh loss %f | obj loss %f | no obj loss %f | lr %f | img/s: %f' % write_args)
             np.save('results', results)
 
 
