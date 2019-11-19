@@ -81,7 +81,7 @@ for batch in range(100):
     for ex in range(8):
         l = coords[ex] * np.expand_dims(vlds[ex], axis=3) # apply the vld mask
         p = np.reshape(pred[ex], (1, 7, 7, 90))
-        TP, TP_FP, TP_FN = mAP(l, p, conf_thresh=0.0, iou_thresh=0.3)
+        TP, TP_FP, TP_FN = mAP(l, p, conf_thresh=-1e6, iou_thresh=0.3)
         TPs += TP; TP_FPs += TP_FP; TP_FNs += TP_FN
 
 ##############################################################
