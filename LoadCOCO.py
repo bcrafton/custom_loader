@@ -259,7 +259,7 @@ class LoadCOCO:
         no_objs = np.stack(no_objs, axis=0)
         cats    = np.stack(cats, axis=0)
 
-        vlds    = np.stack(cats, axis=0)
+        vlds    = np.stack(vlds, axis=0)
 
         ################################
 
