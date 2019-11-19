@@ -229,7 +229,7 @@ while True:
             img_per_sec = (args.batch_size * batch) / (time.time() - start)
             write_args = (args.batch_size * batch, np.average(xy_losses), np.average(wh_losses), np.average(obj_losses), np.average(no_obj_losses), np.average(cat_losses), lr, img_per_sec)
             write('%d: xy loss %f | wh loss %f | obj loss %f | no obj loss %f | cat loss %f | lr %f | img/s: %f' % write_args)
-            np.save('results', results)
+            np.save('%s_results' % (args.name), results)
 
 
 ###############################################################
