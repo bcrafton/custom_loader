@@ -101,7 +101,7 @@ results = np.load(results_filename, allow_pickle=True).item()
 
 ##############################################################
 
-for batch in range(5, 100):
+for batch in range(100):
     img_name = 'img%d' % (batch)
     imgs = results[img_name]
 
@@ -119,7 +119,7 @@ for batch in range(5, 100):
         label = coords[ex] * np.expand_dims(vlds[ex], axis=3)
         pred = preds[ex]
         nbox = np.count_nonzero(np.average(vlds[ex], axis=(1,2)))
-        draw_box('img%d.jpg' % (batch * 8 + ex), image, label, pred, nbox)
+        draw_box('./results/img%d.jpg' % (batch * 8 + ex), image, label, pred, nbox)
         
 
 ##############################################################
