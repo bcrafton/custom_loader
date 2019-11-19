@@ -81,8 +81,8 @@ def yolo_loss(pred, label, obj, no_obj, cat, vld):
     ############################
 
     label_conf = label[:, :, :, :, 4]
-    pred_conf1 = tf.sigmoid(pred[:, :, :, :, 4])
-    pred_conf2 = tf.sigmoid(pred[:, :, :, :, 9])
+    pred_conf1 = pred[:, :, :, :, 4]
+    pred_conf2 = pred[:, :, :, :, 9]
 
     ############################
     '''
@@ -127,7 +127,7 @@ def yolo_loss(pred, label, obj, no_obj, cat, vld):
     # xy_loss = tf.Print(xy_loss, [tf.shape(pred_conf1), tf.shape(label_conf), tf.count_nonzero(loss_no_obj1), tf.count_nonzero(no_obj)], message='', summarize=1000)
     # xy_loss = tf.Print(xy_loss, [tf.shape(vld), tf.shape(no_obj), tf.reduce_sum(loss_no_obj1), tf.reduce_sum(loss_no_obj2)], message='', summarize=1000)
     # xy_loss = tf.Print(xy_loss, [tf.count_nonzero(vld), tf.count_nonzero(vld * no_obj), tf.reduce_sum(vld * loss_no_obj1), tf.reduce_sum(vld * loss_no_obj2)], message='', summarize=1000)
-    # xy_loss = tf.Print(xy_loss, [tf.count_nonzero(vld), tf.count_nonzero(vld * no_obj), tf.count_nonzero(obj), tf.count_nonzero(obj * vld)], message='', summarize=1000)
+    # xy_loss = tf.Print(xy_loss, [tf.shape(vld), tf.shape(obj), tf.shape(no_obj), tf.count_nonzero(vld), tf.count_nonzero(no_obj), tf.count_nonzero(obj)], message='', summarize=1000)
 
     ######################################
     '''

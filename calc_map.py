@@ -44,8 +44,8 @@ def mAP(label, pred, conf_thresh=0.5, iou_thresh=0.5):
     resp_box = iou[:, :, :, 0] > iou[:, :, :, 1]
 
     obj = label[:, :, :, 4]
-    pred_conf1 = sigmoid(pred1[:, :, :, 4])
-    pred_conf2 = sigmoid(pred2[:, :, :, 4])
+    pred_conf1 = pred1[:, :, :, 4]
+    pred_conf2 = pred2[:, :, :, 4]
 
     ###############################
 
@@ -81,8 +81,10 @@ for batch in range(100):
     for ex in range(8):
         l = coords[ex] * np.expand_dims(vlds[ex], axis=3) # apply the vld mask
         p = np.reshape(pred[ex], (1, 7, 7, 90))
-        TP, TP_FP, TP_FN = mAP(l, p, conf_thresh=0.5, iou_thresh=0.5)
+        TP, TP_FP, TP_FN = mAP(l, p, conf_thresh=0.0, iou_thresh=0.3)
         TPs += TP; TP_FPs += TP_FP; TP_FNs += TP_FN
+
+##############################################################
 
 precision = TPs / (TP_FPs + 1e-3)
 recall = TPs / (TP_FNs + 1e-3)
