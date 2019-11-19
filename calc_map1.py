@@ -35,12 +35,7 @@ def grid_to_pix(box):
     box[:, :, :, 2:4] = 448. * box[:, :, :, 2:4]
     return box
 
-'''
-def mAP(label, pred, conf_thresh=0.5, iou_thresh=0.5):
-
-    label = np.reshape(grid_to_pix(label[:, :, :, 0:5]), (-1, 7, 7, 5))
-    pred1 = np.reshape(grid_to_pix(pred[:, :, :, 0:5]),   (1, 7, 7, 5))
-    pred2 = np.reshape(grid_to_pix(pred[:, :, :, 5:10]),  (1, 7, 7, 5))
+def eval_kernel(label, pred1, pred2, iou_thresh=0.5):
 
     iou = calc_iou(label, pred1, pred2)
     resp_box = iou[:, :, :, 0] > iou[:, :, :, 1]
@@ -51,21 +46,13 @@ def mAP(label, pred, conf_thresh=0.5, iou_thresh=0.5):
 
     ###############################
 
-    iou_mask = obj * np.max(iou, axis=3) > iou_thresh
-    conf_mask = np.where(resp_box, np.ones_like(obj) * pred_conf1, np.ones_like(obj) * pred_conf2) > conf_thresh
-
-    TP = np.count_nonzero(iou_mask * conf_mask)
-    TP_FP = np.count_nonzero(pred_conf1 > conf_thresh) + np.count_nonzero(pred_conf2 > conf_thresh)
+    TP = np.count_nonzero(obj * np.max(iou, axis=3) > iou_thresh)
+    TP_FP = np.prod(np.shape(pred_conf1)) + np.prod(np.shape(pred_conf2))
     TP_FN = np.count_nonzero(obj)
 
     return TP, TP_FP, TP_FN
-'''
 
-def mAP(label, pred, conf_thresh=0.5, iou_thresh=0.5):
-
-    label = np.reshape(grid_to_pix(label[:, :, :, 0:5]), (-1, 7, 7, 5))
-    pred1 = np.reshape(grid_to_pix(pred[:, :, :, 0:5]),   (1, 7, 7, 5))
-    pred2 = np.reshape(grid_to_pix(pred[:, :, :, 5:10]),  (1, 7, 7, 5))
+def mAP_kernel(label, pred1, pred2, iou_thresh=0.5):
 
     conf = np.stack((pred1[:, :, :, 4], pred2[:, :, :, 4]), axis=3)
     conf = np.reshape(conf, (7, 7, 2))
@@ -83,32 +70,50 @@ def mAP(label, pred, conf_thresh=0.5, iou_thresh=0.5):
 
 ##############################################################
 
-results = np.load('results.npy', allow_pickle=True).item()
+results_filename = 'yolo_coco1_results.npy'
+results = np.load(results_filename, allow_pickle=True).item()
 
 ##############################################################
 
+TPs = 0
+TP_FPs = 0
+TP_FNs = 0
+
 confs = []
 corrects = []
-
 total_correct = 0
 
 for batch in range(100):
     pred_name = 'pred%d' % (batch)
-    pred = results[pred_name]
+    preds = results[pred_name]
 
     label_name = 'label%d' % (batch)
-    label = results[label_name]
-    coords, objs, no_objs, cats, vlds = label
+    labels = results[label_name]
+    coords, objs, no_objs, cats, vlds = labels
 
     #############
 
     for ex in range(8):
-        l = coords[ex] * np.expand_dims(vlds[ex], axis=3)
-        p = np.reshape(pred[ex], (1, 7, 7, 90))
-        conf, correct, obj = mAP(l, p, conf_thresh=-1e6, iou_thresh=0.3)
+        label = coords[ex] * np.expand_dims(vlds[ex], axis=3)
+        pred = np.reshape(preds[ex], (1, 7, 7, 90))
+
+        label = np.reshape(grid_to_pix(label[:, :, :, 0:5]), (-1, 7, 7, 5))
+        pred1 = np.reshape(grid_to_pix(pred[:, :, :, 0:5]),   (1, 7, 7, 5))
+        pred2 = np.reshape(grid_to_pix(pred[:, :, :, 5:10]),  (1, 7, 7, 5))
+
+        TP, TP_FP, TP_FN = eval_kernel(label, pred1, pred2, iou_thresh=0.3)
+        TPs += TP; TP_FPs += TP_FP; TP_FNs += TP_FN
+
+        conf, correct, obj = mAP_kernel(label, pred1, pred2, iou_thresh=0.3)
         confs.append(conf); corrects.append(correct)
 
     total_correct += np.count_nonzero(objs)
+
+##############################################################
+
+print ('true positive: %f' % (TPs))
+print ('false positive: %f' % (TP_FPs - TPs))
+print ('false negative: %f' % (TP_FNs - TPs))
 
 ##############################################################
 
@@ -119,15 +124,18 @@ argsort = np.argsort(confs)[::-1]
 confs = confs[argsort]
 corrects = corrects[argsort]
 
-##############################################################
-
 precision = np.cumsum(corrects) / np.array(range(1, len(corrects)+1))
 recall = np.cumsum(corrects) / total_correct
 
+AP = np.average(precision * recall)
+print ('AP50: %f' % (AP))
+
 plt.plot(recall, precision)
+plt.xlim(0, 1)
+plt.ylim(0, 1)
 plt.show()
 
-
+##############################################################
 
 
 
