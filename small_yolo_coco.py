@@ -198,6 +198,7 @@ while True:
         coord, obj, no_obj, cat, vld = det
 
         # wtf why is this not triggering ? 
+        # because we force xywhc to be within 0 and 1
         '''
         if (np.any(coord < 0.) or np.any(coord > 1.1)):
             print (coord)
