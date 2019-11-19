@@ -174,7 +174,7 @@ sess.run(tf.global_variables_initializer())
 
 ###############################################################
 
-counter = 0
+batch = 0
 xy_losses = deque(maxlen=1000)
 wh_losses = deque(maxlen=1000)
 obj_losses = deque(maxlen=1000)
@@ -193,9 +193,9 @@ vlds = deque(maxlen=100)
 
 ###############################################################
 
-examples = 80000 
+batches = 10000
 epochs = 30
-lr_slope = 1e-2 / (args.batch_size * examples * epochs)
+lr_slope = 1e-2 / (batches * epochs)
 
 ###############################################################
 
@@ -212,7 +212,7 @@ while True:
             assert(not (np.any(coord < 0.) or np.any(coord > 1.1)))
         '''    
 
-        lr = np.clip(lr_slope * args.batch_size * counter, 1e-3, 1e-2)
+        lr = np.clip(lr_slope * batch, 1e-3, 1e-2)
 
         feed_dict = feed_dict={image_ph: image, coord_ph: coord, obj_ph: obj, no_obj_ph: no_obj, cat_ph: cat, vld_ph: vld, lr_ph: lr}
         [out_np, xy_loss_np, wh_loss_np, obj_loss_np, no_obj_loss_np, _] = sess.run([out, xy_loss, wh_loss, obj_loss, no_obj_loss, train], feed_dict=feed_dict)
@@ -225,16 +225,16 @@ while True:
         obj_losses.append(obj_loss_np)
         no_obj_losses.append(no_obj_loss_np)        
 
-        results['img%d' % (counter % 100)] = image
-        results['pred%d' % (counter % 100)] = out_np
-        results['label%d' % (counter % 100)] = det
-        counter = counter + 1
+        results['img%d' % (batch % 100)] = image
+        results['pred%d' % (batch % 100)] = out_np
+        results['label%d' % (batch % 100)] = det
+        batch = batch + 1
 
         ################################################
 
-        if (counter % 100 == 0):
-            img_per_sec = (args.batch_size * counter) / (time.time() - start)
-            write_args = (args.batch_size * counter, np.average(xy_losses), np.average(wh_losses), np.average(obj_losses), np.average(no_obj_losses), lr, img_per_sec)
+        if (batch % 100 == 0):
+            img_per_sec = (args.batch_size * batch) / (time.time() - start)
+            write_args = (args.batch_size * batch, np.average(xy_losses), np.average(wh_losses), np.average(obj_losses), np.average(no_obj_losses), lr, img_per_sec)
             write('%d: xy loss %f | wh loss %f | obj loss %f | no obj loss %f | lr %f | img/s: %f' % write_args)
             np.save('results', results)
 
