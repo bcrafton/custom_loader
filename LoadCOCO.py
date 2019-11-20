@@ -123,6 +123,10 @@ def preprocess(filename, det_table, cat_table):
         w = w * scale_w
         h = h * scale_h
 
+        # try centering everything.
+        x = x + 0.5 * w
+        y = y + 0.5 * h
+
         if not (x <= 448.1 and y <= 448.1 and w <= 448.1 and h <= 448.1):
             print (x, y, w, h, shape, scale_w, scale_h)
             assert(x <= 448.1 and y <= 448.1 and w <= 448.1 and h <= 448.1)

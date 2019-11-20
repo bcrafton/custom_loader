@@ -27,11 +27,11 @@ def calc_iou(boxA, boxB, realBox):
 
 def calc_iou_help(boxA, boxB):
     # determine the (x, y)-coordinates of the intersection rectangle
-    xA = tf.maximum(boxA[:,:,:,:,0], boxB[:,:,:,:,0])
-    xB = tf.minimum(boxA[:,:,:,:,0] + boxA[:,:,:,:,2], boxB[:,:,:,:,0] + boxB[:,:,:,:,2])
+    xA = tf.maximum(boxA[:,:,:,:,0] - 0.5 * boxA[:,:,:,:,2], boxB[:,:,:,:,0] - 0.5 * boxA[:,:,:,:,2])
+    xB = tf.minimum(boxA[:,:,:,:,0] + 0.5 * boxA[:,:,:,:,2], boxB[:,:,:,:,0] + 0.5 * boxB[:,:,:,:,2])
 
-    yA = tf.maximum(boxA[:,:,:,:,1], boxB[:,:,:,:,1])
-    yB = tf.minimum(boxA[:,:,:,:,1] + boxA[:,:,:,:,3], boxB[:,:,:,:,1] + boxB[:,:,:,:,3])
+    yA = tf.maximum(boxA[:,:,:,:,1] - 0.5 * boxA[:,:,:,:,3], boxB[:,:,:,:,1] - 0.5 * boxB[:,:,:,:,3])
+    yB = tf.minimum(boxA[:,:,:,:,1] + 0.5 * boxA[:,:,:,:,3], boxB[:,:,:,:,1] + 0.5 * boxB[:,:,:,:,3])
 
     # compute the area of intersection rectangle
     ix = xB - xA
