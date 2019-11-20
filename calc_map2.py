@@ -48,11 +48,28 @@ def calc_iou(label, pred1, pred2):
     return np.stack([iou1, iou2], 3)
 
 def calc_iou_help(boxA, boxB):
-    intersectionX = np.minimum(boxA[..., 0] + boxA[..., 2], boxB[..., 0] + boxB[..., 2]) - np.maximum(boxA[..., 0], boxB[..., 0])
-    intersectionY = np.minimum(boxA[..., 1] + boxA[..., 3], boxB[..., 1] + boxB[..., 3]) - np.maximum(boxA[..., 1], boxB[..., 1])
-    intersection = np.maximum(0., intersectionX) * np.maximum(0., intersectionY)
-    union = (boxA[..., 2] * boxA[..., 3]) + (boxB[..., 2] * boxB[..., 3]) - intersection
-    iou = intersection / union
+    # determine the (x, y)-coordinates of the intersection rectangle
+    xA = np.maximum(boxA[...,0] - 0.5 * boxA[...,2], boxB[...,0] - 0.5 * boxA[...,2])
+    xB = np.minimum(boxA[...,0] + 0.5 * boxA[...,2], boxB[...,0] + 0.5 * boxB[...,2])
+
+    yA = np.maximum(boxA[...,1] - 0.5 * boxA[...,3], boxB[...,1] - 0.5 * boxB[...,3])
+    yB = np.minimum(boxA[...,1] + 0.5 * boxA[...,3], boxB[...,1] + 0.5 * boxB[...,3])
+
+    # compute the area of intersection rectangle
+    ix = xB - xA
+    iy = yB - yA
+    interArea = np.maximum(np.zeros_like(ix), ix) * np.maximum(np.zeros_like(iy), iy)
+
+    # compute the area of both the prediction and ground-truth rectangles
+    boxAArea = np.absolute(boxA[...,2] * boxA[...,3])
+    boxBArea = np.absolute(boxB[...,2] * boxB[...,3])
+
+    # compute the intersection over union by taking the intersection
+    # area and dividing it by the sum of prediction + ground-truth
+    # areas - the interesection area
+    iou = interArea / (boxAArea + boxBArea - interArea)
+
+    # return the intersection over union value
     return iou
 
 def draw_box(name, image, label, pred, nbox):
@@ -86,8 +103,8 @@ def draw_box(name, image, label, pred, nbox):
 
 def draw_box_help(image, box, color):
     [x, y, w, h] = box
-    [x11, x12, x21, x22] = [x, x+5, x+w-5, x+w]
-    [y11, y12, y21, y22] = [y, y+5, y+h-5, y+h]
+    [x11, x12, x21, x22] = np.array([x-0.5*w, x-0.5*w+5, x+0.5*w-5, x+0.5*w], dtype=int)
+    [y11, y12, y21, y22] = np.array([y-0.5*h, y-0.5*h+5, y+0.5*h-5, y+0.5*h], dtype=int)
     image[y11:y12, x12:x21, :] = color
     image[y21:y22, x12:x21, :] = color
     image[y12:y21, x11:x12, :] = color
@@ -95,7 +112,7 @@ def draw_box_help(image, box, color):
 
 ##############################################################
 
-results_filename = 'yolo_coco1_results.npy'
+results_filename = 'yolo_coco.npy'
 results = np.load(results_filename, allow_pickle=True).item()
 
 ##############################################################
