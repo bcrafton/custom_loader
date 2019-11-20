@@ -56,7 +56,6 @@ def calc_iou_help(boxA, boxB):
     return iou
 
 def draw_box(name, image, label, pred, nbox):
-
     objs      = label[..., 4]
     true_boxs = grid_to_pix(label[..., 0:4])
     boxs1     = grid_to_pix(pred[..., 0:4])
