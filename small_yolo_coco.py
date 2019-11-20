@@ -154,8 +154,9 @@ conv24 = conv(conv23, (3,3,1024,1024), 1, None, 'conv_24')     # 7
 
 flat = tf.reshape(conv24, [args.batch_size, 7*7*1024])
 
-dense1 = tf.nn.dropout(tf.nn.relu(dense(flat,   (7*7*1024,   4096), None, 'dense_1')), 0.5)
-dense2 =                          dense(dense1, (    4096, 7*7*90), None, 'dense_2')
+# dense1 = tf.nn.dropout(tf.nn.relu(dense(flat,   (7*7*1024,   4096), None, 'dense_1')), 0.5)
+dense1 = tf.nn.leaky_relu(dense(flat,   (7*7*1024,   4096), None, 'dense_1'), 0.1)
+dense2 =                  dense(dense1, (    4096, 7*7*90), None, 'dense_2')
 
 out = tf.reshape(dense2, [args.batch_size, 7, 7, 90])
 
