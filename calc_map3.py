@@ -18,7 +18,7 @@ def grid_to_pix(box):
     box[..., 2:4] = 448. * box[..., 2:4]
     return box
 
-def calc_iou_help(boxA, boxB):
+def calc_iou(boxA, boxB):
     # determine the (x, y)-coordinates of the intersection rectangle
     xA = np.maximum(boxA[...,0] - 0.5 * boxA[...,2], boxB[...,0] - 0.5 * boxA[...,2])
     xB = np.minimum(boxA[...,0] + 0.5 * boxA[...,2], boxB[...,0] + 0.5 * boxB[...,2])
