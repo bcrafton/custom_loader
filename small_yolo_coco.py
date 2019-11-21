@@ -235,6 +235,8 @@ while True:
             write('%d: xy loss %f | wh loss %f | obj loss %f | no obj loss %f | cat loss %f | lr %f | img/s: %f' % write_args)
             np.save(args.name, results)
 
+        # if we want to save weghts and train again, going to have to change conv/dense code above.
+        # basically make it allow for loading and training.
         if (batch % 10 == 0):
             param = sess.run(params, feed_dict={})
             nparam = len(param)
