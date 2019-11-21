@@ -168,6 +168,8 @@ train = tf.train.AdamOptimizer(learning_rate=lr_ph, epsilon=args.eps).minimize(l
 
 ###############################################################
 
+params = tf.trainable_variables()
+
 config = tf.ConfigProto(allow_soft_placement=True)
 config.gpu_options.allow_growth=True
 sess = tf.Session(config=config)
@@ -232,6 +234,15 @@ while True:
             write_args = (args.batch_size * batch, np.average(xy_losses), np.average(wh_losses), np.average(obj_losses), np.average(no_obj_losses), np.average(cat_losses), lr, img_per_sec)
             write('%d: xy loss %f | wh loss %f | obj loss %f | no obj loss %f | cat loss %f | lr %f | img/s: %f' % write_args)
             np.save(args.name, results)
+
+        if (batch % 10 == 0):
+            param = sess.run(params, feed_dict={})
+            nparam = len(param)
+            for p in range(0, nparam, 2):
+                weights['conv_%d'      % (p + 21)] = param[p]
+                weights['conv_%d_bias' % (p + 21)] = param[p + 1]
+
+            np.save('%s_weights' % (args.name), weights)
 
 
 ###############################################################
