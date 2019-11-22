@@ -1,6 +1,8 @@
 
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
+
+##############################################################
 
 colors = [
 np.array([1.0, 0.0, 0.0]),
@@ -21,75 +23,127 @@ color_names = [
 'cyan'
 ]
 
-def draw_boxes(name, image, predict, det, iou):
-    # check shapes
-    assert(np.shape(image) == (1, 448, 448, 3))
-    image = np.reshape(image, (448, 448, 3))
-    assert(np.shape(predict) == (1, 7, 7, 90))
-    predict = np.reshape(predict, (7, 7, 90))
+##############################################################
 
-    coords, objs, no_objs, cats = det
+offset = [
+[[0, 0], [0, 64], [0, 128], [0, 192], [0, 256], [0, 320], [0, 384]], 
+[[64, 0], [64, 64], [64, 128], [64, 192], [64, 256], [64, 320], [64, 384]], 
+[[128, 0], [128, 64], [128, 128], [128, 192], [128, 256], [128, 320], [128, 384]], 
+[[192, 0], [192, 64], [192, 128], [192, 192], [192, 256], [192, 320], [192, 384]], 
+[[256, 0], [256, 64], [256, 128], [256, 192], [256, 256], [256, 320], [256, 384]],  
+[[320, 0], [320, 64], [320, 128], [320, 192], [320, 256], [320, 320], [320, 384]],  
+[[384, 0], [384, 64], [384, 128], [384, 192], [384, 256], [384, 320], [384, 384]]
+]
 
-    image = image / np.max(image)
-    top = image
-    bottom = np.copy(image)
+def grid_to_pix(box):
+    box[..., 0:2] = 64.  * box[..., 0:2] + offset
+    box[..., 2:4] = 448. * box[..., 2:4]
+    return box
 
-    pred_box1 = predict[:, :, 0:5]
-    pred_box2 = predict[:, :, 5:10]
+##############################################################
 
-    nbox = min(len(coords), len(colors))
-    for ii in range(nbox):
-        coord = coords[ii]
-        obj = objs[ii]
+def calc_iou(label, pred1, pred2):
+    iou1 = calc_iou_help(label, pred1)
+    iou2 = calc_iou_help(label, pred2)
+    return np.stack([iou1, iou2], 3)
 
-        ##############################################
+def calc_iou_help(boxA, boxB):
+    # determine the (x, y)-coordinates of the intersection rectangle
+    xA = np.maximum(boxA[...,0] - 0.5 * boxA[...,2], boxB[...,0] - 0.5 * boxA[...,2])
+    xB = np.minimum(boxA[...,0] + 0.5 * boxA[...,2], boxB[...,0] + 0.5 * boxB[...,2])
 
+    yA = np.maximum(boxA[...,1] - 0.5 * boxA[...,3], boxB[...,1] - 0.5 * boxB[...,3])
+    yB = np.minimum(boxA[...,1] + 0.5 * boxA[...,3], boxB[...,1] + 0.5 * boxB[...,3])
+
+    # compute the area of intersection rectangle
+    ix = xB - xA
+    iy = yB - yA
+    interArea = np.maximum(np.zeros_like(ix), ix) * np.maximum(np.zeros_like(iy), iy)
+
+    # compute the area of both the prediction and ground-truth rectangles
+    boxAArea = np.absolute(boxA[...,2] * boxA[...,3])
+    boxBArea = np.absolute(boxB[...,2] * boxB[...,3])
+
+    # compute the intersection over union by taking the intersection
+    # area and dividing it by the sum of prediction + ground-truth
+    # areas - the interesection area
+    iou = interArea / (boxAArea + boxBArea - interArea)
+
+    # return the intersection over union value
+    return iou
+
+def draw_box(name, image, label, pred, nbox):
+    objs      = label[..., 4]
+    true_boxs = grid_to_pix(label[..., 0:4])
+    boxs1     = grid_to_pix(pred[..., 0:4])
+    boxs2     = grid_to_pix(pred[..., 5:9])
+    iou = calc_iou(true_boxs, boxs1, boxs2)
+
+    true_image = np.copy(image)
+    pred_image = np.copy(image)
+
+    nbox = min(nbox, len(colors))
+    for b in range(nbox):
+        obj = objs[b]
         [xc, yc] = np.squeeze(np.where(obj > 0))
 
-        ##############################################
+        box = np.array(true_boxs[b][xc][yc], dtype=int)
+        draw_box_help(true_image, box, colors[b])
 
-        [x, y, w, h, _] = coord[xc][yc]
-
-        x = int(x * 64. + xc * 64.)
-        y = int(y * 64. + yc * 64.)
-        w = int(w * 448.)
-        h = int(h * 448.)
-
-        [x11, x12, x21, x22] = [x, x+5, x+w-5, x+w]
-        [y11, y12, y21, y22] = [y, y+5, y+h-5, y+h]
-        top[y11:y12, x12:x21, :] = colors[ii]
-        top[y21:y22, x12:x21, :] = colors[ii]
-        top[y12:y21, x11:x12, :] = colors[ii]
-        top[y12:y21, x21:x22, :] = colors[ii]
-
-        ##############################################
-
-        iou1 = iou[ii][xc][yc][0]
-        iou2 = iou[ii][xc][yc][1]
-
-        if iou1 < iou2:
-            [x, y, w, h, _] = pred_box2[xc][yc]
-            # print (name, 'iou: ', iou2, color_names[ii])
+        iou1 = iou[b][xc][yc][0]
+        iou2 = iou[b][xc][yc][1]
+        if iou1 > iou2:
+            box = np.array(boxs1[xc][yc], dtype=int)
         else:
-            [x, y, w, h, _] = pred_box1[xc][yc]
-            # print (name, 'iou: ', iou1, color_names[ii])
+            box = np.array(boxs2[xc][yc], dtype=int)
+        draw_box_help(pred_image, box, colors[b])
 
-        x = int(x * 64. + xc * 64.)
-        y = int(y * 64. + yc * 64.)
-        w = int(w * 448.)
-        h = int(h * 448.)
-
-        [x11, x12, x21, x22] = [x, x+5, x+w-5, x+w]
-        [y11, y12, y21, y22] = [y, y+5, y+h-5, y+h]
-        bottom[x11:x12, y12:y21, :] = colors[ii]
-        bottom[x21:x22, y12:y21, :] = colors[ii]
-        bottom[x12:x21, y11:y12, :] = colors[ii]
-        bottom[x12:x21, y21:y22, :] = colors[ii]
-
-        ##############################################
-
-    concat = np.concatenate((top, bottom), axis=1)
+    concat = np.concatenate((true_image, pred_image), axis=1)
     plt.imsave(name, concat)
+
+def draw_box_help(image, box, color):
+    [x, y, w, h] = box
+    [x11, x12, x21, x22] = np.array([x-0.5*w, x-0.5*w+5, x+0.5*w-5, x+0.5*w], dtype=int)
+    [y11, y12, y21, y22] = np.array([y-0.5*h, y-0.5*h+5, y+0.5*h-5, y+0.5*h], dtype=int)
+    image[y11:y12, x12:x21, :] = color
+    image[y21:y22, x12:x21, :] = color
+    image[y12:y21, x11:x12, :] = color
+    image[y12:y21, x21:x22, :] = color
+
+##############################################################
+
+results_filename = 'yolo_coco.npy'
+results = np.load(results_filename, allow_pickle=True).item()
+
+##############################################################
+
+for batch in range(100):
+    img_name = 'img%d' % (batch)
+    imgs = results[img_name]
+
+    pred_name = 'pred%d' % (batch)
+    preds = results[pred_name]
+
+    label_name = 'label%d' % (batch)
+    labels = results[label_name]
+    coords, objs, no_objs, cats, vlds = labels
+
+    #############
+
+    for ex in range(8):
+        image = imgs[ex]; image = image / np.max(image)
+        label = coords[ex] * np.expand_dims(vlds[ex], axis=3)
+        pred = preds[ex]
+        nbox = np.count_nonzero(np.average(vlds[ex], axis=(1,2)))
+        draw_box('./results/img%d.jpg' % (batch * 8 + ex), image, label, pred, nbox)
+        
+
+##############################################################
+
+
+
+
+
 
 
 
