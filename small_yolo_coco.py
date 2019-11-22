@@ -237,7 +237,7 @@ while True:
 
         # if we want to save weghts and train again, going to have to change conv/dense code above.
         # basically make it allow for loading and training.
-        if (batch % 1000 == 0):
+        if (batch % 5000 == 0):
             [conv_21, conv_21_bias, conv_22, conv_22_bias, conv_23, conv_23_bias, conv_24, conv_24_bias, dense_1, dense_1_bias, dense_2, dense_2_bias] = sess.run(params, feed_dict={})
             weights['conv_21']      = conv_21
             weights['conv_21_bias'] = conv_21_bias
@@ -252,6 +252,7 @@ while True:
             weights['dense_2']      = dense_2
             weights['dense_2_bias'] = dense_2_bias
             np.save('%s_weights' % (args.name), weights)
+            write('%d: saving weights' % (args.batch_size * batch))
 
 ###############################################################
 
