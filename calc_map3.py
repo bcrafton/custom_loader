@@ -74,7 +74,7 @@ def mAP(label, pred, iou_thresh=0.5):
 
 ##############################################################
 
-results_filename = 'yolo_coco2.npy'
+results_filename = 'yolo_coco.npy'
 results = np.load(results_filename, allow_pickle=True).item()
 
 ##############################################################
